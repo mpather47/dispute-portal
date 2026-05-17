@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react";
 import { getNotifications } from "../api/apiClient";
+import { useNotificationContext } from "../context/NotificationContext";
 import type { NotificationLog } from "../types/types";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { markAllRead } = useNotificationContext();
 
   useEffect(() => {
     async function load() {
       try {
         const data = await getNotifications();
         setNotifications(data);
+        markAllRead();
       } catch {
         setError("Failed to load notifications. Please try again.");
       } finally {
@@ -20,6 +23,7 @@ export default function NotificationsPage() {
     }
 
     load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) return <p>Loading notifications...</p>;
