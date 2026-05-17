@@ -1,0 +1,34 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: disputeportal-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "P@ssw0rd!2026_DisputePortal"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+
+  api:
+    build:
+      context: .
+      dockerfile: DisputePortal.Api/Dockerfile
+    container_name: disputeportal-api
+    depends_on:
+      - sqlserver
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=DisputePortalDb;User Id=sa;Password=P@ssw0rd!2026_DisputePortal;TrustServerCertificate=True;"
+      Jwt_Issuer: "DisputePortal"
+      Jwt_Audience: "DisputePortalClient"
+      Jwt_Key: "u6o6H9Y1LxM8W5jK1A7uN5LxB9q4VYvQYq8lR8Q0r5mVv7yTz+2P9xZk9Jd3qQ=="
+    ports:
+      - "7000:8080"
+
+volumes:
+  sqlserver_data:
