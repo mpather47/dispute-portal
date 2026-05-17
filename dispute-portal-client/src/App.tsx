@@ -4,7 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import NotificationToaster from "./components/NotificationToaster";
 import { NotificationContext } from "./context/NotificationContext";
-import { useNotificationPolling } from "./hooks/useNotificationPolling";
+import { useSignalRNotifications } from "./hooks/useSignalRNotifications";
 import LoginPage from "./pages/LoginPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import CreateDisputePage from "./pages/CreateDisputePage";
@@ -14,7 +14,7 @@ import AdminDisputesPage from "./pages/AdminDisputesPage";
 import NotificationsPage from "./pages/NotificationsPage";
 
 export default function App() {
-  const { toasts, unreadCount, dismiss, markAllRead } = useNotificationPolling();
+  const { toasts, unreadCount, dismiss, markAllRead } = useSignalRNotifications();
 
   return (
     <NotificationContext.Provider value={{ unreadCount, markAllRead }}>
