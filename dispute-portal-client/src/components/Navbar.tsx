@@ -32,6 +32,8 @@ export default function Navbar() {
 
         {role === "Admin" && <Link to="/admin/disputes">Admin Disputes</Link>}
 
+        <Link to="/notifications">Notifications</Link>
+
         <span>{fullName}</span>
         <button onClick={logout}>Logout</button>
       </div>
