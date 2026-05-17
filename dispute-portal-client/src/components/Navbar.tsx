@@ -10,7 +10,9 @@ export default function Navbar() {
   const fullName = localStorage.getItem("fullName");
 
   function logout() {
-    localStorage.clear();
+    ["token", "userId", "fullName", "email", "role"].forEach((key) =>
+      localStorage.removeItem(key)
+    );
     navigate("/login");
   }
 

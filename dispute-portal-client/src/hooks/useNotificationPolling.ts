@@ -3,8 +3,18 @@ import { getNotifications } from "../api/apiClient";
 import type { NotificationLog } from "../types/types";
 
 const POLL_INTERVAL = 30_000;
-const TOASTED_KEY = "notifLastToastedId";
-const READ_KEY = "notifLastReadId";
+
+function userId() {
+  return localStorage.getItem("userId") ?? "guest";
+}
+
+function toastedKey() {
+  return `notifLastToastedId_${userId()}`;
+}
+
+function readKey() {
+  return `notifLastReadId_${userId()}`;
+}
 
 function getStored(key: string): number {
   return parseInt(localStorage.getItem(key) ?? "0", 10) || 0;
@@ -24,8 +34,8 @@ export function useNotificationPolling() {
 
   function markAllRead() {
     setUnreadCount(0);
-    const max = Math.max(getStored(TOASTED_KEY), getStored(READ_KEY));
-    setStored(READ_KEY, max);
+    const max = Math.max(getStored(toastedKey()), getStored(readKey()));
+    setStored(readKey(), max);
   }
 
   useEffect(() => {
@@ -40,20 +50,20 @@ export function useNotificationPolling() {
         if (cancelled || notifications.length === 0) return;
 
         const maxId = Math.max(...notifications.map((n) => n.id));
-        const lastToasted = getStored(TOASTED_KEY);
-        const lastRead = getStored(READ_KEY);
+        const lastToasted = getStored(toastedKey());
+        const lastRead = getStored(readKey());
 
         const unread = notifications.filter((n) => n.id > lastRead).length;
         setUnreadCount(unread);
 
         if (isFirstLoad && lastToasted === 0) {
-          setStored(TOASTED_KEY, maxId);
+          setStored(toastedKey(), maxId);
           return;
         }
 
         const newOnes = notifications.filter((n) => n.id > lastToasted);
         if (newOnes.length > 0) {
-          setStored(TOASTED_KEY, maxId);
+          setStored(toastedKey(), maxId);
           setToasts((prev) => [...prev, ...newOnes]);
         }
       } catch {
