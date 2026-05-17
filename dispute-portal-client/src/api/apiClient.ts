@@ -8,7 +8,7 @@ import type {
   UpdateDisputeStatusRequest,
 } from "../types/types";
 
-const API_BASE_URL = "http://localhost:7000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
