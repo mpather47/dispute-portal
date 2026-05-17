@@ -28,6 +28,17 @@ export default function DisputeDetailsPage() {
     load();
   }, [id]);
 
+  useEffect(() => {
+    function onDisputeUpdated() {
+      if (!id) return;
+      getDisputeById(Number(id))
+        .then((data) => setDispute(data))
+        .catch(() => setError("Failed to load dispute. Please try again."));
+    }
+    window.addEventListener("dispute:updated", onDisputeUpdated);
+    return () => window.removeEventListener("dispute:updated", onDisputeUpdated);
+  }, [id]);
+
   if (loading) return <p>Loading dispute...</p>;
   if (error) return <p className="error">{error}</p>;
   if (!dispute) return <p>Dispute not found.</p>;
