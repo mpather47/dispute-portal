@@ -97,6 +97,19 @@ public class DisputeService : IDisputeService
             );
         }
 
+        var admins = await _userManager.GetUsersInRoleAsync("Admin");
+        foreach (var admin in admins)
+        {
+            if (admin.Email is not null)
+            {
+                await _notificationService.LogNotificationAsync(
+                    admin.Email,
+                    "New Dispute Submitted",
+                    $"Dispute {dispute.CaseNumber} submitted by {customer?.FullName ?? customer?.Email} for {dispute.Transaction.MerchantName} (R {dispute.Transaction.Amount:F2})."
+                );
+            }
+        }
+
         return await GetDisputeByIdAsync(dispute.Id, customerId, false);
     }
 
