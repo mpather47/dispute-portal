@@ -5,6 +5,7 @@ import type {
   LoginRequest,
   LoginResponse,
   NotificationLog,
+  PagedResult,
   Transaction,
   UpdateDisputeStatusRequest,
 } from "../types/types";
@@ -67,8 +68,8 @@ export async function getDisputeById(id: number): Promise<Dispute> {
 }
 
 export async function getAdminDisputes(): Promise<Dispute[]> {
-  const response = await apiClient.get<Dispute[]>("/api/admin/disputes");
-  return response.data;
+  const response = await apiClient.get<PagedResult<Dispute>>("/api/admin/disputes");
+  return response.data.items;
 }
 
 export async function updateDisputeStatus(
