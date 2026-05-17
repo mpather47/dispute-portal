@@ -30,7 +30,15 @@ export default function AdminDisputesPage() {
   }
 
   useEffect(() => {
-    loadDisputes();
+    async function init() {
+      try {
+        const data = await getAdminDisputes();
+        setDisputes(data);
+      } catch {
+        setError("Failed to load disputes.");
+      }
+    }
+    init();
   }, []);
 
   function startReview(dispute: Dispute) {
