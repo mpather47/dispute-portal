@@ -1,16 +1,17 @@
-﻿using DisputePortal.Api.Models;
+using System.ComponentModel.DataAnnotations;
+using DisputePortal.Api.Models;
 
 namespace DisputePortal.Api.DTOs;
 
 public record CreateDisputeRequest(
-    int TransactionId,
-    string Reason,
-    string CustomerNotes
+    [Range(1, int.MaxValue, ErrorMessage = "A valid transaction ID is required.")] int TransactionId,
+    [Required, MaxLength(500)] string Reason,
+    [MaxLength(2000)] string CustomerNotes
 );
 
 public record UpdateDisputeStatusRequest(
-    DisputeStatus Status,
-    string? AdminNotes
+    [Required] DisputeStatus Status,
+    [MaxLength(2000)] string? AdminNotes
 );
 
 public record DisputeResponse(

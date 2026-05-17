@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using DisputePortal.Api.DTOs;
@@ -8,17 +8,20 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace DisputePortal.Api.Services;
 
-public class AuthService
+public class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IConfiguration _configuration;
+    private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ILogger<AuthService> logger)
     {
         _userManager = userManager;
         _configuration = configuration;
+        _logger = logger;
     }
 
     public async Task<LoginResponse?> LoginAsync(LoginRequest request)
@@ -27,16 +30,15 @@ public class AuthService
 
         if (user is null)
         {
+            _logger.LogWarning("Login attempt for unknown email: {Email}", request.Email);
             return null;
         }
 
-        var passwordValid = await _userManager.CheckPasswordAsync(
-            user,
-            request.Password
-        );
+        var passwordValid = await _userManager.CheckPasswordAsync(user, request.Password);
 
         if (!passwordValid)
         {
+            _logger.LogWarning("Failed login attempt for user {UserId}", user.Id);
             return null;
         }
 
@@ -44,6 +46,8 @@ public class AuthService
         var role = roles.FirstOrDefault() ?? "Customer";
 
         var token = GenerateJwtToken(user, role);
+
+        _logger.LogInformation("User {UserId} logged in successfully", user.Id);
 
         return new LoginResponse(
             token,
@@ -69,10 +73,7 @@ public class AuthService
         };
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
-        var credentials = new SigningCredentials(
-            securityKey,
-            SecurityAlgorithms.HmacSha256
-        );
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
             issuer,

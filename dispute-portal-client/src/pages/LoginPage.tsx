@@ -6,8 +6,8 @@ import { login } from "../api/apiClient";
 export default function LoginPage() {
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("customer@test.com");
-  const [password, setPassword] = useState("Password123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -44,6 +44,7 @@ export default function LoginPage() {
         <label htmlFor="email">Email</label>
         <input
           id="email"
+          type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -57,18 +58,6 @@ export default function LoginPage() {
         />
 
         <button type="submit">Login</button>
-
-        <div className="hint">
-          <p>
-            Customer: <strong>customer@test.com</strong>
-          </p>
-          <p>
-            Admin: <strong>admin@test.com</strong>
-          </p>
-          <p>
-            Password: <strong>Password123!</strong>
-          </p>
-        </div>
       </form>
     </div>
   );

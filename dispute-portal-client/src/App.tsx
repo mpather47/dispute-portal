@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ErrorBoundary from "./components/ErrorBoundary";
 import LoginPage from "./pages/LoginPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import CreateDisputePage from "./pages/CreateDisputePage";
@@ -10,7 +11,7 @@ import AdminDisputesPage from "./pages/AdminDisputesPage";
 
 export default function App() {
   return (
-    <>
+    <ErrorBoundary>
       <Navbar />
 
       <Routes>
@@ -62,6 +63,6 @@ export default function App() {
           }
         />
       </Routes>
-    </>
+    </ErrorBoundary>
   );
 }

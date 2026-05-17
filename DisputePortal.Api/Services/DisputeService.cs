@@ -1,4 +1,4 @@
-﻿using DisputePortal.Api.Data;
+using DisputePortal.Api.Data;
 using DisputePortal.Api.DTOs;
 using DisputePortal.Api.Models;
 using Microsoft.AspNetCore.Identity;
@@ -6,20 +6,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DisputePortal.Api.Services;
 
-public class DisputeService
+public class DisputeService : IDisputeService
 {
     private readonly AppDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly NotificationService _notificationService;
+    private readonly INotificationService _notificationService;
+    private readonly ILogger<DisputeService> _logger;
 
     public DisputeService(
         AppDbContext db,
         UserManager<ApplicationUser> userManager,
-        NotificationService notificationService)
+        INotificationService notificationService,
+        ILogger<DisputeService> logger)
     {
         _db = db;
         _userManager = userManager;
         _notificationService = notificationService;
+        _logger = logger;
     }
 
     public async Task<DisputeResponse> CreateDisputeAsync(
@@ -33,7 +36,7 @@ public class DisputeService
 
         if (transaction is null)
         {
-            throw new InvalidOperationException("Transaction not found.");
+            throw new KeyNotFoundException("Transaction not found.");
         }
 
         if (transaction.Account.UserId != customerId)
@@ -59,7 +62,7 @@ public class DisputeService
 
         var dispute = new Dispute
         {
-            CaseNumber = $"DSP-{DateTime.UtcNow:yyyyMMddHHmmss}",
+            CaseNumber = $"DSP-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}",
             TransactionId = transaction.Id,
             CustomerId = customerId,
             Reason = request.Reason,
@@ -78,6 +81,10 @@ public class DisputeService
 
         _db.Disputes.Add(dispute);
         await _db.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Dispute {CaseNumber} created for customer {CustomerId}",
+            dispute.CaseNumber, customerId);
 
         var customer = await _userManager.FindByIdAsync(customerId);
 
@@ -128,15 +135,28 @@ public class DisputeService
         return disputes.Select(MapDispute).ToList();
     }
 
-    public async Task<List<DisputeResponse>> GetAllDisputesForAdminAsync()
+    public async Task<PagedResult<DisputeResponse>> GetAllDisputesForAdminAsync(
+        int page,
+        int pageSize)
     {
-        var disputes = await _db.Disputes
+        var query = _db.Disputes
             .Include(x => x.Transaction)
             .Include(x => x.Events)
-            .OrderByDescending(x => x.CreatedAt)
+            .OrderByDescending(x => x.CreatedAt);
+
+        var total = await query.CountAsync();
+
+        var disputes = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
-        return disputes.Select(MapDispute).ToList();
+        return new PagedResult<DisputeResponse>(
+            disputes.Select(MapDispute).ToList(),
+            total,
+            page,
+            pageSize
+        );
     }
 
     public async Task<DisputeResponse> GetDisputeByIdAsync(
@@ -151,7 +171,7 @@ public class DisputeService
 
         if (dispute is null)
         {
-            throw new InvalidOperationException("Dispute not found.");
+            throw new KeyNotFoundException("Dispute not found.");
         }
 
         if (!isAdmin && dispute.CustomerId != userId)
@@ -177,7 +197,7 @@ public class DisputeService
 
         if (dispute is null)
         {
-            throw new InvalidOperationException("Dispute not found.");
+            throw new KeyNotFoundException("Dispute not found.");
         }
 
         if (!IsValidStatusTransition(dispute.Status, request.Status))
@@ -207,6 +227,10 @@ public class DisputeService
         });
 
         await _db.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Dispute {CaseNumber} updated to {Status} by {AdminName}",
+            dispute.CaseNumber, request.Status, adminName);
 
         if (dispute.Customer.Email is not null)
         {

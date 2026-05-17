@@ -9,12 +9,18 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
-      const data = await getTransactions();
-      setTransactions(data);
-      setLoading(false);
+      try {
+        const data = await getTransactions();
+        setTransactions(data);
+      } catch {
+        setError("Failed to load transactions. Please try again.");
+      } finally {
+        setLoading(false);
+      }
     }
 
     load();
@@ -25,9 +31,8 @@ export default function TransactionsPage() {
     return text.includes(search.toLowerCase());
   });
 
-  if (loading) {
-    return <p>Loading transactions...</p>;
-  }
+  if (loading) return <p>Loading transactions...</p>;
+  if (error) return <p className="error">{error}</p>;
 
   return (
     <div className="page">

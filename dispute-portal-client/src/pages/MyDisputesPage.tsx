@@ -7,20 +7,25 @@ import type { Dispute } from "../types/types";
 export default function MyDisputesPage() {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
-      const data = await getMyDisputes();
-      setDisputes(data);
-      setLoading(false);
+      try {
+        const data = await getMyDisputes();
+        setDisputes(data);
+      } catch {
+        setError("Failed to load disputes. Please try again.");
+      } finally {
+        setLoading(false);
+      }
     }
 
     load();
   }, []);
 
-  if (loading) {
-    return <p>Loading disputes...</p>;
-  }
+  if (loading) return <p>Loading disputes...</p>;
+  if (error) return <p className="error">{error}</p>;
 
   return (
     <div className="page">
