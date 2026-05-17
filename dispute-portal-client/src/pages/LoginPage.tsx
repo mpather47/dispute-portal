@@ -23,6 +23,8 @@ export default function LoginPage() {
       localStorage.setItem("email", result.email);
       localStorage.setItem("role", result.role);
 
+      window.dispatchEvent(new CustomEvent("user:login"));
+
       if (result.role === "Admin") {
         navigate("/admin/disputes");
       } else {

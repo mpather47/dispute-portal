@@ -61,11 +61,17 @@ export function useNotificationPolling() {
       }
     }
 
+    function handleLogin() {
+      run(true);
+    }
+
+    window.addEventListener("user:login", handleLogin);
     run(true);
     const interval = setInterval(() => run(false), POLL_INTERVAL);
     return () => {
       cancelled = true;
       clearInterval(interval);
+      window.removeEventListener("user:login", handleLogin);
     };
   }, []);
 
