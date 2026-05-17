@@ -26,6 +26,17 @@ export default function NotificationsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    function onReceived(e: Event) {
+      const notification = (e as CustomEvent<NotificationLog>).detail;
+      setNotifications((prev) => [notification, ...prev]);
+      markAllRead();
+    }
+    window.addEventListener("notification:received", onReceived);
+    return () => window.removeEventListener("notification:received", onReceived);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (loading) return <p>Loading notifications...</p>;
   if (error) return <p className="error">{error}</p>;
 

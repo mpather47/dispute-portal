@@ -46,6 +46,17 @@ export function useSignalRNotifications() {
         if (cancelled) return;
         setUnreadCount((prev) => prev + 1);
         setToasts((prev) => [...prev, notification]);
+        window.dispatchEvent(
+          new CustomEvent("notification:received", { detail: notification })
+        );
+      });
+
+      connection.on("DisputeUpdated", () => {
+        if (!cancelled) window.dispatchEvent(new CustomEvent("dispute:updated"));
+      });
+
+      connection.on("DisputeCreated", () => {
+        if (!cancelled) window.dispatchEvent(new CustomEvent("dispute:updated"));
       });
 
       try {

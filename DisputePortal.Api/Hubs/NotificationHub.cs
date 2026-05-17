@@ -11,9 +11,12 @@ public class NotificationHub : Hub
     {
         var email = Context.User?.FindFirstValue(ClaimTypes.Email);
         if (email is not null)
-        {
             await Groups.AddToGroupAsync(Context.ConnectionId, email);
-        }
+
+        var role = Context.User?.FindFirstValue(ClaimTypes.Role);
+        if (role is not null)
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"role:{role}");
+
         await base.OnConnectedAsync();
     }
 }

@@ -50,6 +50,14 @@ export default function AdminDisputesPage() {
     init();
   }, []);
 
+  useEffect(() => {
+    function onDisputeUpdated() {
+      loadDisputes();
+    }
+    window.addEventListener("dispute:updated", onDisputeUpdated);
+    return () => window.removeEventListener("dispute:updated", onDisputeUpdated);
+  }, []);
+
   function startReview(dispute: Dispute) {
     const allowed = validTransitions[dispute.status] ?? [];
     setSelectedDispute(dispute);
