@@ -1,6 +1,6 @@
 @DisputePortal.Api_HostAddress = http://localhost:5051
 
-GET {{DisputePortal.Api_HostAddress}}/weatherforecast/
+
 Accept: application/json
 
 ###
