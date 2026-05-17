@@ -88,15 +88,6 @@ public class DisputeService : IDisputeService
 
         var customer = await _userManager.FindByIdAsync(customerId);
 
-        if (customer?.Email is not null)
-        {
-            await _notificationService.LogNotificationAsync(
-                customer.Email,
-                "Dispute Submitted",
-                $"Your dispute {dispute.CaseNumber} has been submitted."
-            );
-        }
-
         var admins = await _userManager.GetUsersInRoleAsync("Admin");
         foreach (var admin in admins)
         {
