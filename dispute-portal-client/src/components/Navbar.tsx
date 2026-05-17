@@ -10,6 +10,7 @@ export default function Navbar() {
   const fullName = localStorage.getItem("fullName");
 
   function logout() {
+    window.dispatchEvent(new CustomEvent("user:logout"));
     ["token", "userId", "fullName", "email", "role"].forEach((key) =>
       localStorage.removeItem(key)
     );
