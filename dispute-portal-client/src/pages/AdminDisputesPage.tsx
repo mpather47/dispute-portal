@@ -111,9 +111,11 @@ export default function AdminDisputesPage() {
                     <StatusBadge status={dispute.status} />
                   </td>
                   <td>
-                    <button type="button" onClick={() => startReview(dispute)}>
-                      Review
-                    </button>
+                    {(validTransitions[dispute.status]?.length ?? 0) > 0 && (
+                      <button type="button" onClick={() => startReview(dispute)}>
+                        Review
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
