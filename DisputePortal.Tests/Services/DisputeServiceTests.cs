@@ -20,8 +20,11 @@ public class DisputeServiceTests
     private static Mock<UserManager<ApplicationUser>> CreateUserManagerMock()
     {
         var store = new Mock<IUserStore<ApplicationUser>>();
-        return new Mock<UserManager<ApplicationUser>>(
+        var mock = new Mock<UserManager<ApplicationUser>>(
             store.Object, null, null, null, null, null, null, null, null);
+        mock.Setup(x => x.GetUsersInRoleAsync(It.IsAny<string>()))
+            .ReturnsAsync(new List<ApplicationUser>());
+        return mock;
     }
 
     private static DisputeService CreateService(
