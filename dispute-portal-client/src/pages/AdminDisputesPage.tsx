@@ -4,7 +4,7 @@ import { getAdminDisputes, updateDisputeStatus } from "../api/apiClient";
 import StatusBadge from "../components/StatusBadge";
 import type { Dispute } from "../types/types";
 
-const statuses = [
+const allStatuses = [
   { value: 1, label: "Submitted" },
   { value: 2, label: "UnderReview" },
   { value: 3, label: "MoreInfoRequired" },
@@ -12,6 +12,15 @@ const statuses = [
   { value: 5, label: "Rejected" },
   { value: 6, label: "Resolved" },
 ];
+
+const validTransitions: Record<string, number[]> = {
+  Submitted: [2, 3, 5],
+  UnderReview: [3, 4, 5, 6],
+  MoreInfoRequired: [2, 5],
+  Approved: [6],
+  Rejected: [],
+  Resolved: [],
+};
 
 export default function AdminDisputesPage() {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
@@ -42,9 +51,10 @@ export default function AdminDisputesPage() {
   }, []);
 
   function startReview(dispute: Dispute) {
+    const allowed = validTransitions[dispute.status] ?? [];
     setSelectedDispute(dispute);
     setAdminNotes("");
-    setStatus(2);
+    setStatus(allowed[0] ?? 2);
     setError("");
   }
 
@@ -125,11 +135,15 @@ export default function AdminDisputesPage() {
                 value={status}
                 onChange={(e) => setStatus(Number(e.target.value))}
               >
-                {statuses.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
+                {allStatuses
+                  .filter((s) =>
+                    (validTransitions[selectedDispute.status] ?? []).includes(s.value)
+                  )
+                  .map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
               </select>
 
               <label htmlFor="adminNotes">Admin Notes</label>
