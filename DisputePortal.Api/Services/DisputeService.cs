@@ -101,6 +101,8 @@ public class DisputeService : IDisputeService
             }
         }
 
+        await _notificationService.PushDisputeEventAsync("role:Admin", "DisputeCreated");
+
         return await GetDisputeByIdAsync(dispute.Id, customerId, false);
     }
 
@@ -243,7 +245,10 @@ public class DisputeService : IDisputeService
                 "Dispute Status Updated",
                 $"Your dispute {dispute.CaseNumber} is now {dispute.Status}."
             );
+            await _notificationService.PushDisputeEventAsync(dispute.Customer.Email, "DisputeUpdated");
         }
+
+        await _notificationService.PushDisputeEventAsync("role:Admin", "DisputeUpdated");
 
         return MapDispute(dispute);
     }

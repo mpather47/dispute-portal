@@ -40,6 +40,11 @@ public class NotificationService : INotificationService
         );
     }
 
+    public async Task PushDisputeEventAsync(string group, string eventName)
+    {
+        await _hub.Clients.Group(group).SendAsync(eventName);
+    }
+
     public async Task<List<NotificationResponse>> GetForRecipientAsync(string email)
     {
         return await _db.NotificationLogs

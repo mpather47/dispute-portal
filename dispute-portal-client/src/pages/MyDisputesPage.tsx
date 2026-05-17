@@ -10,7 +10,7 @@ export default function MyDisputesPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function load() {
+    async function init() {
       try {
         const data = await getMyDisputes();
         setDisputes(data);
@@ -20,8 +20,17 @@ export default function MyDisputesPage() {
         setLoading(false);
       }
     }
+    init();
+  }, []);
 
-    load();
+  useEffect(() => {
+    function onDisputeUpdated() {
+      getMyDisputes()
+        .then((data) => setDisputes(data))
+        .catch(() => setError("Failed to load disputes. Please try again."));
+    }
+    window.addEventListener("dispute:updated", onDisputeUpdated);
+    return () => window.removeEventListener("dispute:updated", onDisputeUpdated);
   }, []);
 
   if (loading) return <p>Loading disputes...</p>;
