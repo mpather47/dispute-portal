@@ -1,4 +1,16 @@
 services:
+  client:
+    build:
+      context: ./dispute-portal-client
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:7000
+    container_name: disputeportal-client
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: disputeportal-sqlserver

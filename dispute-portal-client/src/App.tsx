@@ -8,6 +8,7 @@ import CreateDisputePage from "./pages/CreateDisputePage";
 import MyDisputesPage from "./pages/MyDisputesPage";
 import DisputeDetailsPage from "./pages/DisputeDetailsPage";
 import AdminDisputesPage from "./pages/AdminDisputesPage";
+import NotificationsPage from "./pages/NotificationsPage";
 
 export default function App() {
   return (
@@ -59,6 +60,15 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["Admin"]}>
               <AdminDisputesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute allowedRoles={["Customer", "Admin"]}>
+              <NotificationsPage />
             </ProtectedRoute>
           }
         />

@@ -4,6 +4,7 @@ import type {
   Dispute,
   LoginRequest,
   LoginResponse,
+  NotificationLog,
   Transaction,
   UpdateDisputeStatusRequest,
 } from "../types/types";
@@ -79,5 +80,10 @@ export async function updateDisputeStatus(
     request
   );
 
+  return response.data;
+}
+
+export async function getNotifications(): Promise<NotificationLog[]> {
+  const response = await apiClient.get<NotificationLog[]>("/api/notifications");
   return response.data;
 }

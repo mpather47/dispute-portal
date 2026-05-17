@@ -57,3 +57,10 @@ export interface UpdateDisputeStatusRequest {
   status: number;
   adminNotes?: string;
 }
+
+export interface NotificationLog {
+  id: number;
+  subject: string;
+  message: string;
+  sentAt: string;
+}
