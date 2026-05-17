@@ -9,26 +9,28 @@ export default function DisputeDetailsPage() {
 
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
       if (!id) return;
 
-      const data = await getDisputeById(Number(id));
-      setDispute(data);
-      setLoading(false);
+      try {
+        const data = await getDisputeById(Number(id));
+        setDispute(data);
+      } catch {
+        setError("Failed to load dispute. Please try again.");
+      } finally {
+        setLoading(false);
+      }
     }
 
     load();
   }, [id]);
 
-  if (loading) {
-    return <p>Loading dispute...</p>;
-  }
-
-  if (!dispute) {
-    return <p>Dispute not found.</p>;
-  }
+  if (loading) return <p>Loading dispute...</p>;
+  if (error) return <p className="error">{error}</p>;
+  if (!dispute) return <p>Dispute not found.</p>;
 
   return (
     <div className="page">

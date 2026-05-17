@@ -1,9 +1,9 @@
-﻿using DisputePortal.Api.Data;
+using DisputePortal.Api.Data;
 using DisputePortal.Api.Models;
 
 namespace DisputePortal.Api.Services;
 
-public class NotificationService
+public class NotificationService : INotificationService
 {
     private readonly AppDbContext _db;
 

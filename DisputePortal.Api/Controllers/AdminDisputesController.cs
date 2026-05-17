@@ -1,4 +1,3 @@
-﻿using System.Security.Claims;
 using DisputePortal.Api.DTOs;
 using DisputePortal.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -6,24 +5,25 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DisputePortal.Api.Controllers;
 
-[ApiController]
 [Route("api/admin/disputes")]
 [Authorize(Roles = "Admin")]
-public class AdminDisputesController : ControllerBase
+public class AdminDisputesController : ApiControllerBase
 {
-    private readonly DisputeService _disputeService;
+    private readonly IDisputeService _disputeService;
 
-    public AdminDisputesController(DisputeService disputeService)
+    public AdminDisputesController(IDisputeService disputeService)
     {
         _disputeService = disputeService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<DisputeResponse>>> GetAllDisputes()
+    public async Task<ActionResult<PagedResult<DisputeResponse>>> GetAllDisputes(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        var disputes = await _disputeService.GetAllDisputesForAdminAsync();
-
-        return Ok(disputes);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var result = await _disputeService.GetAllDisputesForAdminAsync(page, pageSize);
+        return Ok(result);
     }
 
     [HttpPut("{id:int}/status")]
@@ -31,21 +31,12 @@ public class AdminDisputesController : ControllerBase
         int id,
         UpdateDisputeStatusRequest request)
     {
-        try
-        {
-            var adminName = User.FindFirstValue(ClaimTypes.Name) ?? "Admin";
+        var dispute = await _disputeService.UpdateDisputeStatusAsync(
+            id,
+            request,
+            GetUserName()
+        );
 
-            var dispute = await _disputeService.UpdateDisputeStatusAsync(
-                id,
-                request,
-                adminName
-            );
-
-            return Ok(dispute);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        return Ok(dispute);
     }
 }

@@ -4,7 +4,7 @@ services:
     container_name: disputeportal-sqlserver
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "P@ssw0rd!2026_DisputePortal"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD}"
     ports:
       - "1433:1433"
     volumes:
@@ -21,12 +21,13 @@ services:
       - 8.8.8.8
       - 1.1.1.1
     environment:
-      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_ENVIRONMENT: "Production"
       ASPNETCORE_URLS: "http://+:8080"
-      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=DisputePortalDb;User Id=sa;Password=P@ssw0rd!2026_DisputePortal;TrustServerCertificate=True;"
-      Jwt_Issuer: "DisputePortal"
-      Jwt_Audience: "DisputePortalClient"
-      Jwt_Key: "u6o6H9Y1LxM8W5jK1A7uN5LxB9q4VYvQYq8lR8Q0r5mVv7yTz+2P9xZk9Jd3qQ=="
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=DisputePortalDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;"
+      Jwt__Issuer: "DisputePortal"
+      Jwt__Audience: "DisputePortalClient"
+      Jwt__Key: "${JWT_KEY}"
+      Cors__AllowedOrigins: "${ALLOWED_ORIGINS}"
     ports:
       - "7000:8080"
 

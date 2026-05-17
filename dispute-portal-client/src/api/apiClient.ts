@@ -8,12 +8,13 @@ import type {
   UpdateDisputeStatusRequest,
 } from "../types/types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 30000,
 });
-//test
+
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
 
@@ -23,6 +24,19 @@ apiClient.interceptors.request.use((config) => {
 
   return config;
 });
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && window.location.pathname !== "/login") {
+      ["token", "userId", "fullName", "email", "role"].forEach((key) =>
+        localStorage.removeItem(key)
+      );
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
 
 export async function login(request: LoginRequest): Promise<LoginResponse> {
   const response = await apiClient.post<LoginResponse>("/api/auth/login", request);

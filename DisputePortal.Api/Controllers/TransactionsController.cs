@@ -1,4 +1,3 @@
-﻿using System.Security.Claims;
 using DisputePortal.Api.DTOs;
 using DisputePortal.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -6,14 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DisputePortal.Api.Controllers;
 
-[ApiController]
 [Route("api/transactions")]
 [Authorize(Roles = "Customer")]
-public class TransactionsController : ControllerBase
+public class TransactionsController : ApiControllerBase
 {
-    private readonly DisputeService _disputeService;
+    private readonly IDisputeService _disputeService;
 
-    public TransactionsController(DisputeService disputeService)
+    public TransactionsController(IDisputeService disputeService)
     {
         _disputeService = disputeService;
     }
@@ -21,20 +19,7 @@ public class TransactionsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<TransactionResponse>>> GetTransactions()
     {
-        var userId = GetUserId();
-
-        if (string.IsNullOrWhiteSpace(userId))
-        {
-            return Unauthorized(new { message = "User ID claim is missing." });
-        }
-
-        var transactions = await _disputeService.GetCustomerTransactionsAsync(userId);
-
+        var transactions = await _disputeService.GetCustomerTransactionsAsync(GetUserId());
         return Ok(transactions);
-    }
-
-    private string? GetUserId()
-    {
-        return User.FindFirstValue(ClaimTypes.NameIdentifier);
     }
 }
