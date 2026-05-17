@@ -10,6 +10,27 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		docker-compose.yml = docker-compose.yml
 	EndProjectSection
 EndProject
+Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "dispute-portal-client", "dispute-portal-client\", "{5CDB421B-32B2-4C24-E220-C0759102F86C}"
+	ProjectSection(WebsiteProperties) = preProject
+		TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.0"
+		Debug.AspNetCompiler.VirtualPath = "/localhost_51178"
+		Debug.AspNetCompiler.PhysicalPath = "dispute-portal-client\"
+		Debug.AspNetCompiler.TargetPath = "PrecompiledWeb\localhost_51178\"
+		Debug.AspNetCompiler.Updateable = "true"
+		Debug.AspNetCompiler.ForceOverwrite = "true"
+		Debug.AspNetCompiler.FixedNames = "false"
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.VirtualPath = "/localhost_51178"
+		Release.AspNetCompiler.PhysicalPath = "dispute-portal-client\"
+		Release.AspNetCompiler.TargetPath = "PrecompiledWeb\localhost_51178\"
+		Release.AspNetCompiler.Updateable = "true"
+		Release.AspNetCompiler.ForceOverwrite = "true"
+		Release.AspNetCompiler.FixedNames = "false"
+		Release.AspNetCompiler.Debug = "False"
+		VWDPort = "51178"
+		SlnRelativePath = "dispute-portal-client\"
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,6 +41,10 @@ Global
 		{90E1034C-8221-4393-A751-ACACCB2705D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{90E1034C-8221-4393-A751-ACACCB2705D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{90E1034C-8221-4393-A751-ACACCB2705D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5CDB421B-32B2-4C24-E220-C0759102F86C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5CDB421B-32B2-4C24-E220-C0759102F86C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5CDB421B-32B2-4C24-E220-C0759102F86C}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{5CDB421B-32B2-4C24-E220-C0759102F86C}.Release|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
