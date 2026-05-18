@@ -2,6 +2,7 @@ using DisputePortal.Api.DTOs;
 using DisputePortal.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace DisputePortal.Api.Controllers;
 
@@ -48,5 +49,46 @@ public class DisputesController : ApiControllerBase
         );
 
         return Ok(dispute);
+    }
+
+    [HttpPost("{id:int}/reply")]
+    [Authorize(Roles = "Customer")]
+    public async Task<ActionResult<DisputeResponse>> ReplyToDispute(int id, ReplyRequest request)
+    {
+        var dispute = await _disputeService.ReplyToDisputeAsync(
+            id,
+            GetUserId(),
+            GetUserName(),
+            request
+        );
+
+        return Ok(dispute);
+    }
+
+    [HttpPost("{id:int}/attachments")]
+    [RequestSizeLimit(6 * 1024 * 1024)]
+    public async Task<ActionResult<AttachmentResponse>> UploadAttachment(int id, IFormFile file)
+    {
+        var attachment = await _disputeService.AddAttachmentAsync(
+            id,
+            GetUserId(),
+            GetUserName(),
+            file
+        );
+
+        return Ok(attachment);
+    }
+
+    [HttpGet("{id:int}/attachments/{attachmentId:int}")]
+    public async Task<IActionResult> DownloadAttachment(int id, int attachmentId)
+    {
+        var (data, contentType, fileName) = await _disputeService.GetAttachmentAsync(
+            id,
+            GetUserId(),
+            User.IsInRole("Admin"),
+            attachmentId
+        );
+
+        return File(data, contentType, fileName);
     }
 }

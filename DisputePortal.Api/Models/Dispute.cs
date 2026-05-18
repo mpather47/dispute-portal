@@ -18,4 +18,5 @@ public class Dispute
     public ApplicationUser Customer { get; set; } = null!;
 
     public List<DisputeEvent> Events { get; set; } = new();
+    public List<DisputeAttachment> Attachments { get; set; } = new();
 }

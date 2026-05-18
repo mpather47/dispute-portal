@@ -1,6 +1,7 @@
 using DisputePortal.Api.Data;
 using DisputePortal.Api.DTOs;
 using DisputePortal.Api.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -134,6 +135,7 @@ public class DisputeService : IDisputeService
         var disputes = await _db.Disputes
             .Include(x => x.Transaction)
             .Include(x => x.Events)
+            .Include(x => x.Attachments)
             .Where(x => x.CustomerId == customerId)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync();
@@ -150,6 +152,7 @@ public class DisputeService : IDisputeService
         var query = _db.Disputes
             .Include(x => x.Transaction)
             .Include(x => x.Events)
+            .Include(x => x.Attachments)
             .Include(x => x.Customer)
             .AsQueryable();
 
@@ -190,6 +193,7 @@ public class DisputeService : IDisputeService
         var dispute = await _db.Disputes
             .Include(x => x.Transaction)
             .Include(x => x.Events)
+            .Include(x => x.Attachments)
             .FirstOrDefaultAsync(x => x.Id == disputeId);
 
         if (dispute is null)
@@ -216,6 +220,7 @@ public class DisputeService : IDisputeService
             .Include(x => x.Customer)
             .Include(x => x.Transaction)
             .Include(x => x.Events)
+            .Include(x => x.Attachments)
             .FirstOrDefaultAsync(x => x.Id == disputeId);
 
         if (dispute is null)
@@ -302,6 +307,156 @@ public class DisputeService : IDisputeService
         };
     }
 
+    public async Task<DisputeResponse> ReplyToDisputeAsync(
+        int disputeId,
+        string customerId,
+        string customerName,
+        ReplyRequest request)
+    {
+        var dispute = await _db.Disputes
+            .Include(x => x.Customer)
+            .Include(x => x.Transaction)
+            .Include(x => x.Events)
+            .Include(x => x.Attachments)
+            .FirstOrDefaultAsync(x => x.Id == disputeId);
+
+        if (dispute is null)
+            throw new KeyNotFoundException("Dispute not found.");
+
+        if (dispute.CustomerId != customerId)
+            throw new UnauthorizedAccessException("You do not have access to this dispute.");
+
+        if (dispute.Status != DisputeStatus.MoreInfoRequired)
+            throw new InvalidOperationException("A reply can only be submitted when the dispute requires more information.");
+
+        dispute.Status = DisputeStatus.UnderReview;
+
+        dispute.Events.Add(new DisputeEvent
+        {
+            Status = DisputeStatus.UnderReview,
+            Message = request.Message,
+            CreatedBy = customerName,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Customer replied to dispute {CaseNumber}, status back to UnderReview",
+            dispute.CaseNumber);
+
+        await _notificationService.PushDisputeEventAsync("role:Admin", "DisputeUpdated");
+
+        return MapDispute(dispute);
+    }
+
+    public async Task<AttachmentResponse> AddAttachmentAsync(
+        int disputeId,
+        string userId,
+        string uploaderName,
+        IFormFile file)
+    {
+        if (file.Length > 5 * 1024 * 1024)
+            throw new InvalidOperationException("File size cannot exceed 5 MB.");
+
+        var allowed = new[] { "image/jpeg", "image/png", "image/gif", "application/pdf", "text/plain" };
+        if (!allowed.Contains(file.ContentType))
+            throw new InvalidOperationException("Only images, PDFs, and text files are allowed.");
+
+        var dispute = await _db.Disputes
+            .Include(x => x.Customer)
+            .FirstOrDefaultAsync(x => x.Id == disputeId);
+
+        if (dispute is null)
+            throw new KeyNotFoundException("Dispute not found.");
+
+        bool isAdmin = false;
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is not null)
+            isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
+
+        if (!isAdmin && dispute.CustomerId != userId)
+            throw new UnauthorizedAccessException("You do not have access to this dispute.");
+
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms);
+
+        var attachment = new DisputeAttachment
+        {
+            DisputeId = disputeId,
+            FileName = Path.GetFileName(file.FileName),
+            ContentType = file.ContentType,
+            FileData = ms.ToArray(),
+            FileSize = file.Length,
+            UploadedBy = uploaderName,
+            UploadedAt = DateTime.UtcNow
+        };
+
+        _db.DisputeAttachments.Add(attachment);
+        await _db.SaveChangesAsync();
+
+        return new AttachmentResponse(
+            attachment.Id,
+            attachment.FileName,
+            attachment.ContentType,
+            attachment.FileSize,
+            attachment.UploadedBy,
+            attachment.UploadedAt
+        );
+    }
+
+    public async Task<(byte[] Data, string ContentType, string FileName)> GetAttachmentAsync(
+        int disputeId,
+        string userId,
+        bool isAdmin,
+        int attachmentId)
+    {
+        var attachment = await _db.DisputeAttachments
+            .Include(x => x.Dispute)
+            .FirstOrDefaultAsync(x => x.Id == attachmentId && x.DisputeId == disputeId);
+
+        if (attachment is null)
+            throw new KeyNotFoundException("Attachment not found.");
+
+        if (!isAdmin && attachment.Dispute.CustomerId != userId)
+            throw new UnauthorizedAccessException("You do not have access to this attachment.");
+
+        return (attachment.FileData, attachment.ContentType, attachment.FileName);
+    }
+
+    public async Task<AdminStatsResponse> GetAdminStatsAsync()
+    {
+        var all = await _db.Disputes.ToListAsync();
+
+        var total = all.Count;
+
+        var terminalStatuses = new[] { DisputeStatus.Rejected, DisputeStatus.Resolved };
+        var openCount = all.Count(d => !terminalStatuses.Contains(d.Status));
+
+        var todayUtc = DateTime.UtcNow.Date;
+        var submittedToday = all.Count(d => d.CreatedAt.Date == todayUtc);
+
+        var resolved = all
+            .Where(d => d.ResolvedAt.HasValue)
+            .Select(d => (d.ResolvedAt!.Value - d.CreatedAt).TotalDays)
+            .ToList();
+
+        var avgResolutionDays = resolved.Count > 0
+            ? Math.Round(resolved.Average(), 1)
+            : 0.0;
+
+        var byStatus = all
+            .GroupBy(d => d.Status.ToString())
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        foreach (var status in Enum.GetNames<DisputeStatus>())
+        {
+            byStatus.TryAdd(status, 0);
+        }
+
+        return new AdminStatsResponse(total, openCount, submittedToday, avgResolutionDays, byStatus);
+    }
+
     private static DisputeResponse MapDispute(Dispute dispute, string? customerName = null)
     {
         return new DisputeResponse(
@@ -323,6 +478,17 @@ public class DisputeService : IDisputeService
                     e.Message,
                     e.CreatedBy,
                     e.CreatedAt
+                ))
+                .ToList(),
+            dispute.Attachments
+                .OrderBy(x => x.UploadedAt)
+                .Select(a => new AttachmentResponse(
+                    a.Id,
+                    a.FileName,
+                    a.ContentType,
+                    a.FileSize,
+                    a.UploadedBy,
+                    a.UploadedAt
                 ))
                 .ToList(),
             customerName
