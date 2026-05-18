@@ -1,5 +1,6 @@
 using DisputePortal.Api.Data;
 using DisputePortal.Api.DTOs;
+using DisputePortal.Api.Helpers;
 using DisputePortal.Api.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -66,8 +67,8 @@ public class DisputeService : IDisputeService
             CaseNumber = $"DSP-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}",
             TransactionId = transaction.Id,
             CustomerId = customerId,
-            Reason = request.Reason,
-            CustomerNotes = request.CustomerNotes,
+            Reason = InputSanitizer.Sanitize(request.Reason),
+            CustomerNotes = InputSanitizer.Sanitize(request.CustomerNotes),
             Status = DisputeStatus.Submitted,
             CreatedAt = DateTime.UtcNow
         };
@@ -236,7 +237,9 @@ public class DisputeService : IDisputeService
         }
 
         dispute.Status = request.Status;
-        dispute.AdminNotes = request.AdminNotes;
+        dispute.AdminNotes = string.IsNullOrWhiteSpace(request.AdminNotes)
+            ? null
+            : InputSanitizer.Sanitize(request.AdminNotes);
 
         if (request.Status is DisputeStatus.Approved
             or DisputeStatus.Rejected
@@ -248,8 +251,9 @@ public class DisputeService : IDisputeService
         dispute.Events.Add(new DisputeEvent
         {
             Status = request.Status,
-            Message = request.AdminNotes
-                ?? $"Dispute status updated to {request.Status}.",
+            Message = string.IsNullOrWhiteSpace(dispute.AdminNotes)
+                ? $"Dispute status updated to {request.Status}."
+                : dispute.AdminNotes,
             CreatedBy = adminName,
             CreatedAt = DateTime.UtcNow
         });
@@ -329,12 +333,16 @@ public class DisputeService : IDisputeService
         if (dispute.Status != DisputeStatus.MoreInfoRequired)
             throw new InvalidOperationException("A reply can only be submitted when the dispute requires more information.");
 
+        var sanitizedMessage = InputSanitizer.Sanitize(request.Message);
+        if (string.IsNullOrEmpty(sanitizedMessage))
+            throw new InvalidOperationException("Reply message cannot be blank.");
+
         dispute.Status = DisputeStatus.UnderReview;
 
         dispute.Events.Add(new DisputeEvent
         {
             Status = DisputeStatus.UnderReview,
-            Message = request.Message,
+            Message = sanitizedMessage,
             CreatedBy = customerName,
             CreatedAt = DateTime.UtcNow
         });
@@ -344,6 +352,19 @@ public class DisputeService : IDisputeService
         _logger.LogInformation(
             "Customer replied to dispute {CaseNumber}, status back to UnderReview",
             dispute.CaseNumber);
+
+        var admins = await _userManager.GetUsersInRoleAsync("Admin");
+        foreach (var admin in admins)
+        {
+            if (admin.Email is not null)
+            {
+                await _notificationService.LogNotificationAsync(
+                    admin.Email,
+                    "Customer Reply Received",
+                    $"Customer replied to dispute {dispute.CaseNumber} ({dispute.Transaction.MerchantName}). Case is now Under Review."
+                );
+            }
+        }
 
         await _notificationService.PushDisputeEventAsync("role:Admin", "DisputeUpdated");
 
@@ -378,13 +399,16 @@ public class DisputeService : IDisputeService
         if (!isAdmin && dispute.CustomerId != userId)
             throw new UnauthorizedAccessException("You do not have access to this dispute.");
 
+        if (!isAdmin && dispute.Status != DisputeStatus.MoreInfoRequired)
+            throw new InvalidOperationException("Attachments can only be uploaded when more information has been requested.");
+
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms);
 
         var attachment = new DisputeAttachment
         {
             DisputeId = disputeId,
-            FileName = Path.GetFileName(file.FileName),
+            FileName = InputSanitizer.Sanitize(Path.GetFileName(file.FileName)),
             ContentType = file.ContentType,
             FileData = ms.ToArray(),
             FileSize = file.Length,

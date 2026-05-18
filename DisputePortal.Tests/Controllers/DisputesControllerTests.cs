@@ -14,7 +14,7 @@ public class DisputesControllerTests
     private static DisputeResponse MakeDispute(int id = 1) => new(
         id, $"CASE-00{id}", 10, "Merchant", 99.99m,
         "Fraud", "Notes", null, "Submitted",
-        DateTime.UtcNow, null, []);
+        DateTime.UtcNow, null, [], []);
 
     private static (DisputesController controller, Mock<IDisputeService> mock) Create(
         string userId = "user-1", string role = "Customer")

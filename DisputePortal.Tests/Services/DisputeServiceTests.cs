@@ -3,6 +3,7 @@ using Xunit;
 using DisputePortal.Api.DTOs;
 using DisputePortal.Api.Models;
 using DisputePortal.Api.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -21,7 +22,7 @@ public class DisputeServiceTests
     {
         var store = new Mock<IUserStore<ApplicationUser>>();
         var mock = new Mock<UserManager<ApplicationUser>>(
-            store.Object, null, null, null, null, null, null, null, null);
+            store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
         mock.Setup(x => x.GetUsersInRoleAsync(It.IsAny<string>()))
             .ReturnsAsync(new List<ApplicationUser>());
         return mock;
@@ -84,6 +85,13 @@ public class DisputeServiceTests
         }
 
         return (account, transaction);
+    }
+
+    private static async Task SetDisputeStatusDirectAsync(AppDbContext db, int disputeId, DisputeStatus status)
+    {
+        var entity = await db.Disputes.FindAsync(disputeId);
+        entity!.Status = status;
+        await db.SaveChangesAsync();
     }
 
     private static async Task SeedUserAsync(AppDbContext db, string userId, string email = "user@test.com")
@@ -301,6 +309,7 @@ public class DisputeServiceTests
     public async Task GetAllDisputesForAdminAsync_ReturnsPaginatedResult()
     {
         using var db = CreateDb();
+        await SeedUserAsync(db, "user-1");
         var umMock = CreateUserManagerMock();
         umMock.Setup(x => x.FindByIdAsync(It.IsAny<string>())).ReturnsAsync((ApplicationUser?)null);
         var service = CreateService(db, umMock);
@@ -339,6 +348,8 @@ public class DisputeServiceTests
     public async Task GetCustomerDisputesAsync_ReturnsOnlyOwnedDisputes()
     {
         using var db = CreateDb();
+        await SeedUserAsync(db, "user-1");
+        await SeedUserAsync(db, "user-2", "user2@test.com");
         var umMock = CreateUserManagerMock();
         umMock.Setup(x => x.FindByIdAsync(It.IsAny<string>())).ReturnsAsync((ApplicationUser?)null);
         var service = CreateService(db, umMock);
@@ -394,5 +405,163 @@ public class DisputeServiceTests
         var result = await service.GetCustomerTransactionsAsync("user-1");
 
         Assert.True(result.Single().HasDispute);
+    }
+
+    // ── ReplyToDisputeAsync ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ReplyToDisputeAsync_NotFound_ThrowsKeyNotFoundException()
+    {
+        using var db = CreateDb();
+        var service = CreateService(db);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.ReplyToDisputeAsync(999, "user-1", "User", new ReplyRequest("hello")));
+    }
+
+    [Fact]
+    public async Task ReplyToDisputeAsync_WrongUser_ThrowsUnauthorizedAccessException()
+    {
+        using var db = CreateDb();
+        await SeedUserAsync(db, "owner", "owner@test.com");
+        var (_, tx) = await SeedTransactionAsync(db, userId: "owner");
+        var umMock = CreateUserManagerMock();
+        umMock.Setup(x => x.FindByIdAsync("owner")).ReturnsAsync((ApplicationUser?)null);
+        var service = CreateService(db, umMock);
+        var created = await service.CreateDisputeAsync("owner", new CreateDisputeRequest(tx.Id, "Fraud", ""));
+        await SetDisputeStatusDirectAsync(db, created.Id, DisputeStatus.MoreInfoRequired);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.ReplyToDisputeAsync(created.Id, "intruder", "Intruder", new ReplyRequest("hello")));
+    }
+
+    [Fact]
+    public async Task ReplyToDisputeAsync_WrongStatus_ThrowsInvalidOperationException()
+    {
+        using var db = CreateDb();
+        await SeedUserAsync(db, "user-1");
+        var (_, tx) = await SeedTransactionAsync(db);
+        var umMock = CreateUserManagerMock();
+        umMock.Setup(x => x.FindByIdAsync("user-1")).ReturnsAsync((ApplicationUser?)null);
+        var service = CreateService(db, umMock);
+        var created = await service.CreateDisputeAsync("user-1", new CreateDisputeRequest(tx.Id, "Fraud", ""));
+        // Status is Submitted — not MoreInfoRequired
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ReplyToDisputeAsync(created.Id, "user-1", "User", new ReplyRequest("hello")));
+    }
+
+    [Fact]
+    public async Task ReplyToDisputeAsync_BlankMessage_ThrowsInvalidOperationException()
+    {
+        using var db = CreateDb();
+        await SeedUserAsync(db, "user-1");
+        var (_, tx) = await SeedTransactionAsync(db);
+        var umMock = CreateUserManagerMock();
+        umMock.Setup(x => x.FindByIdAsync("user-1")).ReturnsAsync((ApplicationUser?)null);
+        var service = CreateService(db, umMock);
+        var created = await service.CreateDisputeAsync("user-1", new CreateDisputeRequest(tx.Id, "Fraud", ""));
+        await SetDisputeStatusDirectAsync(db, created.Id, DisputeStatus.MoreInfoRequired);
+
+        // HTML-only input sanitizes to empty string
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ReplyToDisputeAsync(created.Id, "user-1", "User", new ReplyRequest("<b></b>")));
+    }
+
+    [Fact]
+    public async Task ReplyToDisputeAsync_ValidRequest_TransitionsToUnderReview()
+    {
+        using var db = CreateDb();
+        await SeedUserAsync(db, "user-1");
+        var (_, tx) = await SeedTransactionAsync(db);
+        var umMock = CreateUserManagerMock();
+        umMock.Setup(x => x.FindByIdAsync("user-1")).ReturnsAsync((ApplicationUser?)null);
+        var service = CreateService(db, umMock);
+        var created = await service.CreateDisputeAsync("user-1", new CreateDisputeRequest(tx.Id, "Fraud", ""));
+        await SetDisputeStatusDirectAsync(db, created.Id, DisputeStatus.MoreInfoRequired);
+
+        var result = await service.ReplyToDisputeAsync(
+            created.Id, "user-1", "Test User", new ReplyRequest("Here are the details."));
+
+        Assert.Equal(DisputeStatus.UnderReview.ToString(), result.Status);
+        Assert.Equal("Here are the details.", result.Events.Last().Message);
+        Assert.Equal("Test User", result.Events.Last().CreatedBy);
+    }
+
+    // ── GetAdminStatsAsync ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetAdminStatsAsync_EmptyDatabase_ReturnsZeroes()
+    {
+        using var db = CreateDb();
+        var service = CreateService(db);
+
+        var stats = await service.GetAdminStatsAsync();
+
+        Assert.Equal(0, stats.Total);
+        Assert.Equal(0, stats.OpenCount);
+        Assert.Equal(0, stats.SubmittedToday);
+        Assert.Equal(0.0, stats.AvgResolutionDays);
+    }
+
+    [Fact]
+    public async Task GetAdminStatsAsync_WithDisputes_ReturnsCorrectCounts()
+    {
+        using var db = CreateDb();
+        var umMock = CreateUserManagerMock();
+        umMock.Setup(x => x.FindByIdAsync(It.IsAny<string>())).ReturnsAsync((ApplicationUser?)null);
+        var service = CreateService(db, umMock);
+
+        var (_, tx1) = await SeedTransactionAsync(db, "user-1");
+        var (_, tx2) = await SeedTransactionAsync(db, "user-1");
+        var (_, tx3) = await SeedTransactionAsync(db, "user-1");
+
+        var d1 = await service.CreateDisputeAsync("user-1", new CreateDisputeRequest(tx1.Id, "R1", ""));
+        var d2 = await service.CreateDisputeAsync("user-1", new CreateDisputeRequest(tx2.Id, "R2", ""));
+        await service.CreateDisputeAsync("user-1", new CreateDisputeRequest(tx3.Id, "R3", ""));
+
+        // Resolve d1 and set ResolvedAt so avg calculation has data
+        await SetDisputeStatusDirectAsync(db, d1.Id, DisputeStatus.Resolved);
+        var d1Entity = await db.Disputes.FindAsync(d1.Id);
+        d1Entity!.ResolvedAt = d1Entity.CreatedAt.AddDays(4);
+        await db.SaveChangesAsync();
+
+        // Reject d2
+        await SetDisputeStatusDirectAsync(db, d2.Id, DisputeStatus.Rejected);
+
+        var stats = await service.GetAdminStatsAsync();
+
+        Assert.Equal(3, stats.Total);
+        Assert.Equal(1, stats.OpenCount); // only d3 (Submitted) is open; Rejected+Resolved are terminal
+        Assert.Equal(3, stats.SubmittedToday);
+        Assert.Equal(4.0, stats.AvgResolutionDays);
+        Assert.Equal(1, stats.ByStatus["Resolved"]);
+        Assert.Equal(1, stats.ByStatus["Rejected"]);
+        Assert.Equal(1, stats.ByStatus["Submitted"]);
+    }
+
+    // ── AddAttachmentAsync ───────────────────────────────────────────────────
+
+    [Fact]
+    public async Task AddAttachmentAsync_NonMoreInfoRequired_ThrowsInvalidOperationException()
+    {
+        using var db = CreateDb();
+        await SeedUserAsync(db, "user-1");
+        var umMock = CreateUserManagerMock();
+        umMock.Setup(x => x.FindByIdAsync("user-1")).ReturnsAsync((ApplicationUser?)null);
+        var service = CreateService(db, umMock);
+        var (_, tx) = await SeedTransactionAsync(db);
+        var created = await service.CreateDisputeAsync("user-1", new CreateDisputeRequest(tx.Id, "Fraud", ""));
+        // Dispute is in Submitted status — not MoreInfoRequired
+
+        var fileMock = new Mock<IFormFile>();
+        fileMock.Setup(f => f.Length).Returns(1024);
+        fileMock.Setup(f => f.ContentType).Returns("image/jpeg");
+        fileMock.Setup(f => f.FileName).Returns("test.jpg");
+        fileMock.Setup(f => f.CopyToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.AddAttachmentAsync(created.Id, "user-1", "Test User", fileMock.Object));
     }
 }
