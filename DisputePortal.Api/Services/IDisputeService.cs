@@ -1,4 +1,5 @@
 using DisputePortal.Api.DTOs;
+using DisputePortal.Api.Models;
 
 namespace DisputePortal.Api.Services;
 
