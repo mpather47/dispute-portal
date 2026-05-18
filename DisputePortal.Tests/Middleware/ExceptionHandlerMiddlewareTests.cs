@@ -1,3 +1,4 @@
+using DisputePortal.Api.Exceptions;
 using DisputePortal.Api.Middleware;
 using Xunit;
 using Microsoft.AspNetCore.Http;
@@ -111,5 +112,34 @@ public class ExceptionHandlerMiddlewareTests
         var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
         Assert.DoesNotContain("Secret internal error.", body);
         Assert.Contains("unexpected", body);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_BusinessRuleException_Returns400WithMessage()
+    {
+        var middleware = Create(_ => throw new BusinessRuleException("Reply message cannot be blank."));
+        var context = CreateHttpContext();
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(400, context.Response.StatusCode);
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.Contains("Reply message cannot be blank.", body);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_BusinessRuleException_NotCaughtAsGenericInvalidOperation()
+    {
+        // BusinessRuleException must be caught before the generic InvalidOperationException handler
+        var middleware = Create(_ => throw new BusinessRuleException("Specific user message."));
+        var context = CreateHttpContext();
+
+        await middleware.InvokeAsync(context);
+
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.DoesNotContain("Bad request", body);
+        Assert.Contains("Specific user message.", body);
     }
 }

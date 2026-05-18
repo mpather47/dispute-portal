@@ -2,6 +2,7 @@ using DisputePortal.Api.DTOs;
 using DisputePortal.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.StaticFiles;
 
 namespace DisputePortal.Api.Controllers;
@@ -67,6 +68,7 @@ public class DisputesController : ApiControllerBase
 
     [HttpPost("{id:int}/attachments")]
     [RequestSizeLimit(6 * 1024 * 1024)]
+    [EnableRateLimiting("upload")]
     public async Task<ActionResult<AttachmentResponse>> UploadAttachment(int id, IFormFile file)
     {
         var attachment = await _disputeService.AddAttachmentAsync(

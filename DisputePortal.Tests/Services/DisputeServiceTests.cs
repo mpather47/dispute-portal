@@ -1,6 +1,7 @@
 using DisputePortal.Api.Data;
 using Xunit;
 using DisputePortal.Api.DTOs;
+using DisputePortal.Api.Exceptions;
 using DisputePortal.Api.Models;
 using DisputePortal.Api.Services;
 using Microsoft.AspNetCore.Http;
@@ -132,24 +133,24 @@ public class DisputeServiceTests
     }
 
     [Fact]
-    public async Task CreateDisputeAsync_TransactionNotDisputable_ThrowsInvalidOperationException()
+    public async Task CreateDisputeAsync_TransactionNotDisputable_ThrowsBusinessRuleException()
     {
         using var db = CreateDb();
         var (_, tx) = await SeedTransactionAsync(db, isDisputable: false);
         var service = CreateService(db);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<BusinessRuleException>(() =>
             service.CreateDisputeAsync("user-1", new CreateDisputeRequest(tx.Id, "Fraud", "")));
     }
 
     [Fact]
-    public async Task CreateDisputeAsync_TransactionAlreadyDisputed_ThrowsInvalidOperationException()
+    public async Task CreateDisputeAsync_TransactionAlreadyDisputed_ThrowsBusinessRuleException()
     {
         using var db = CreateDb();
         var (_, tx) = await SeedTransactionAsync(db, hasDispute: true);
         var service = CreateService(db);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<BusinessRuleException>(() =>
             service.CreateDisputeAsync("user-1", new CreateDisputeRequest(tx.Id, "Fraud", "")));
     }
 
@@ -243,7 +244,7 @@ public class DisputeServiceTests
     }
 
     [Fact]
-    public async Task UpdateDisputeStatusAsync_InvalidTransition_ThrowsInvalidOperationException()
+    public async Task UpdateDisputeStatusAsync_InvalidTransition_ThrowsBusinessRuleException()
     {
         using var db = CreateDb();
         await SeedUserAsync(db, "user-1");
@@ -254,7 +255,7 @@ public class DisputeServiceTests
         var created = await service.CreateDisputeAsync("user-1", new CreateDisputeRequest(tx.Id, "Fraud", ""));
 
         // Submitted → Resolved is not a valid transition
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<BusinessRuleException>(() =>
             service.UpdateDisputeStatusAsync(
                 created.Id,
                 new UpdateDisputeStatusRequest(DisputeStatus.Resolved, null),
@@ -436,7 +437,7 @@ public class DisputeServiceTests
     }
 
     [Fact]
-    public async Task ReplyToDisputeAsync_WrongStatus_ThrowsInvalidOperationException()
+    public async Task ReplyToDisputeAsync_WrongStatus_ThrowsBusinessRuleException()
     {
         using var db = CreateDb();
         await SeedUserAsync(db, "user-1");
@@ -447,12 +448,12 @@ public class DisputeServiceTests
         var created = await service.CreateDisputeAsync("user-1", new CreateDisputeRequest(tx.Id, "Fraud", ""));
         // Status is Submitted — not MoreInfoRequired
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<BusinessRuleException>(() =>
             service.ReplyToDisputeAsync(created.Id, "user-1", "User", new ReplyRequest("hello")));
     }
 
     [Fact]
-    public async Task ReplyToDisputeAsync_BlankMessage_ThrowsInvalidOperationException()
+    public async Task ReplyToDisputeAsync_BlankMessage_ThrowsBusinessRuleException()
     {
         using var db = CreateDb();
         await SeedUserAsync(db, "user-1");
@@ -464,7 +465,7 @@ public class DisputeServiceTests
         await SetDisputeStatusDirectAsync(db, created.Id, DisputeStatus.MoreInfoRequired);
 
         // HTML-only input sanitizes to empty string
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<BusinessRuleException>(() =>
             service.ReplyToDisputeAsync(created.Id, "user-1", "User", new ReplyRequest("<b></b>")));
     }
 
@@ -543,7 +544,7 @@ public class DisputeServiceTests
     // ── AddAttachmentAsync ───────────────────────────────────────────────────
 
     [Fact]
-    public async Task AddAttachmentAsync_NonMoreInfoRequired_ThrowsInvalidOperationException()
+    public async Task AddAttachmentAsync_NonMoreInfoRequired_ThrowsBusinessRuleException()
     {
         using var db = CreateDb();
         await SeedUserAsync(db, "user-1");
@@ -561,7 +562,7 @@ public class DisputeServiceTests
         fileMock.Setup(f => f.CopyToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<BusinessRuleException>(() =>
             service.AddAttachmentAsync(created.Id, "user-1", "Test User", fileMock.Object));
     }
 }
