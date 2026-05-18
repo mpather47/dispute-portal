@@ -143,12 +143,19 @@ public class DisputeService : IDisputeService
 
     public async Task<PagedResult<DisputeResponse>> GetAllDisputesForAdminAsync(
         int page,
-        int pageSize)
+        int pageSize,
+        DisputeStatus? status = null)
     {
         var query = _db.Disputes
             .Include(x => x.Transaction)
             .Include(x => x.Events)
-            .OrderByDescending(x => x.CreatedAt);
+            .Include(x => x.Customer)
+            .AsQueryable();
+
+        if (status.HasValue)
+            query = query.Where(x => x.Status == status.Value);
+
+        query = query.OrderByDescending(x => x.CreatedAt);
 
         var total = await query.CountAsync();
 
@@ -158,7 +165,7 @@ public class DisputeService : IDisputeService
             .ToListAsync();
 
         return new PagedResult<DisputeResponse>(
-            disputes.Select(MapDispute).ToList(),
+            disputes.Select(d => MapDispute(d, d.Customer.FullName)).ToList(),
             total,
             page,
             pageSize
@@ -285,7 +292,7 @@ public class DisputeService : IDisputeService
         };
     }
 
-    private static DisputeResponse MapDispute(Dispute dispute)
+    private static DisputeResponse MapDispute(Dispute dispute, string? customerName = null)
     {
         return new DisputeResponse(
             dispute.Id,
@@ -307,7 +314,8 @@ public class DisputeService : IDisputeService
                     e.CreatedBy,
                     e.CreatedAt
                 ))
-                .ToList()
+                .ToList(),
+            customerName
         );
     }
 }

@@ -67,9 +67,15 @@ export async function getDisputeById(id: number): Promise<Dispute> {
   return response.data;
 }
 
-export async function getAdminDisputes(): Promise<Dispute[]> {
-  const response = await apiClient.get<PagedResult<Dispute>>("/api/admin/disputes");
-  return response.data.items;
+export async function getAdminDisputes(
+  page = 1,
+  pageSize = 10,
+  status?: number
+): Promise<PagedResult<Dispute>> {
+  const params: Record<string, string | number> = { page, pageSize };
+  if (status !== undefined) params.status = status;
+  const response = await apiClient.get<PagedResult<Dispute>>("/api/admin/disputes", { params });
+  return response.data;
 }
 
 export async function updateDisputeStatus(
