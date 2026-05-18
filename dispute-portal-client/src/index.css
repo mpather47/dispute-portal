@@ -130,13 +130,18 @@ th {
   flex-wrap: wrap;
 }
 
-.filter-bar label {
+.filter-label {
   margin: 0;
   white-space: nowrap;
 }
 
 .filter-bar select {
   width: auto;
+  margin: 0;
+}
+
+.search-input {
+  width: 220px;
   margin: 0;
 }
 

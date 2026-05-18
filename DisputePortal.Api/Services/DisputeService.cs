@@ -144,7 +144,8 @@ public class DisputeService : IDisputeService
     public async Task<PagedResult<DisputeResponse>> GetAllDisputesForAdminAsync(
         int page,
         int pageSize,
-        DisputeStatus? status = null)
+        DisputeStatus? status = null,
+        string? search = null)
     {
         var query = _db.Disputes
             .Include(x => x.Transaction)
@@ -154,6 +155,15 @@ public class DisputeService : IDisputeService
 
         if (status.HasValue)
             query = query.Where(x => x.Status == status.Value);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLower();
+            query = query.Where(x =>
+                x.CaseNumber.ToLower().Contains(term) ||
+                x.Customer.FullName.ToLower().Contains(term) ||
+                x.Customer.Email!.ToLower().Contains(term));
+        }
 
         query = query.OrderByDescending(x => x.CreatedAt);
 

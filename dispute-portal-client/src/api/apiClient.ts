@@ -70,10 +70,12 @@ export async function getDisputeById(id: number): Promise<Dispute> {
 export async function getAdminDisputes(
   page = 1,
   pageSize = 10,
-  status?: number
+  status?: number,
+  search?: string
 ): Promise<PagedResult<Dispute>> {
   const params: Record<string, string | number> = { page, pageSize };
   if (status !== undefined) params.status = status;
+  if (search) params.search = search;
   const response = await apiClient.get<PagedResult<Dispute>>("/api/admin/disputes", { params });
   return response.data;
 }

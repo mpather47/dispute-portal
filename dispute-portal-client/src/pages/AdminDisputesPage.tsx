@@ -30,6 +30,8 @@ export default function AdminDisputesPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<number | "">("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [panelMode, setPanelMode] = useState<"view" | "review">("view");
   const [newStatus, setNewStatus] = useState(2);
@@ -38,10 +40,19 @@ export default function AdminDisputesPage() {
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
+  // Debounce search input → search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   useEffect(() => {
     async function init() {
       try {
-        const result = await getAdminDisputes(page, PAGE_SIZE, statusFilter || undefined);
+        const result = await getAdminDisputes(page, PAGE_SIZE, statusFilter || undefined, search || undefined);
         setDisputes(result.items);
         setTotalCount(result.totalCount);
         setSelectedDispute((prev) =>
@@ -52,11 +63,11 @@ export default function AdminDisputesPage() {
       }
     }
     init();
-  }, [page, statusFilter]);
+  }, [page, statusFilter, search]);
 
   useEffect(() => {
     function onDisputeUpdated() {
-      getAdminDisputes(page, PAGE_SIZE, statusFilter || undefined)
+      getAdminDisputes(page, PAGE_SIZE, statusFilter || undefined, search || undefined)
         .then((result) => {
           setDisputes(result.items);
           setTotalCount(result.totalCount);
@@ -68,7 +79,7 @@ export default function AdminDisputesPage() {
     }
     window.addEventListener("dispute:updated", onDisputeUpdated);
     return () => window.removeEventListener("dispute:updated", onDisputeUpdated);
-  }, [page, statusFilter]);
+  }, [page, statusFilter, search]);
 
   function openPanel(dispute: Dispute, mode: "view" | "review") {
     setSelectedDispute(dispute);
@@ -106,6 +117,11 @@ export default function AdminDisputesPage() {
     setSelectedDispute(null);
   }
 
+  function handleSearchChange(value: string) {
+    setSearchInput(value);
+    setSelectedDispute(null);
+  }
+
   return (
     <div className="page">
       <div className="page-header">
@@ -114,7 +130,14 @@ export default function AdminDisputesPage() {
       </div>
 
       <div className="filter-bar">
-        <label htmlFor="statusFilter">Filter by status</label>
+        <input
+          type="search"
+          placeholder="Search by case or customer…"
+          value={searchInput}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="search-input"
+        />
+        <label htmlFor="statusFilter" className="filter-label">Status</label>
         <select
           id="statusFilter"
           value={statusFilter}
@@ -122,7 +145,7 @@ export default function AdminDisputesPage() {
             handleFilterChange(e.target.value === "" ? "" : Number(e.target.value))
           }
         >
-          <option value="">All statuses</option>
+          <option value="">All</option>
           {allStatuses.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
