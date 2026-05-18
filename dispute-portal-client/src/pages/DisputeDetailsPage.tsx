@@ -59,7 +59,11 @@ export default function DisputeDetailsPage() {
 
   async function handleReply(e: { preventDefault(): void }) {
     e.preventDefault();
-    if (!dispute || !replyText.trim()) return;
+    if (!dispute) return;
+    if (!replyText.trim()) {
+      setReplyError("Reply cannot be blank.");
+      return;
+    }
     setReplyLoading(true);
     setReplyError("");
     try {
@@ -194,22 +198,24 @@ export default function DisputeDetailsPage() {
               </table>
             )}
 
-            <div style={{ marginTop: "1rem" }}>
-              <label htmlFor="fileUpload" style={{ display: "block", marginBottom: "0.5rem" }}>
-                Upload Attachment
-              </label>
-              <input
-                id="fileUpload"
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,.pdf,.txt"
-                onChange={handleFileChange}
-                disabled={uploading}
-                style={{ marginBottom: 0 }}
-              />
-              {uploading && <p className="muted" style={{ marginTop: "0.5rem" }}>Uploading…</p>}
-              {uploadError && <div className="error" style={{ marginTop: "0.5rem" }}>{uploadError}</div>}
-            </div>
+            {dispute.status === "MoreInfoRequired" && (
+              <div style={{ marginTop: "1rem" }}>
+                <label htmlFor="fileUpload" style={{ display: "block", marginBottom: "0.5rem" }}>
+                  Upload Attachment
+                </label>
+                <input
+                  id="fileUpload"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,.pdf,.txt"
+                  onChange={handleFileChange}
+                  disabled={uploading}
+                  style={{ marginBottom: 0 }}
+                />
+                {uploading && <p className="muted" style={{ marginTop: "0.5rem" }}>Uploading…</p>}
+                {uploadError && <div className="error" style={{ marginTop: "0.5rem" }}>{uploadError}</div>}
+              </div>
+            )}
           </div>
         </div>
 
