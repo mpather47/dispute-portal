@@ -26,7 +26,7 @@ export default function LoginPage() {
 
       window.dispatchEvent(new CustomEvent("user:login"));
 
-      navigate(result.role === "Admin" ? "/admin/disputes" : "/transactions");
+      navigate(result.role === "Admin" ? "/admin/dashboard" : "/transactions");
     } catch {
       setError("Invalid email or password.");
     } finally {
