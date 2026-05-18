@@ -21,6 +21,7 @@ const mockDisputes: Dispute[] = [
     createdAt: '2024-01-15T10:00:00Z',
     resolvedAt: null,
     events: [],
+    attachments: [],
   },
   {
     id: 2,
@@ -35,6 +36,7 @@ const mockDisputes: Dispute[] = [
     createdAt: '2024-01-16T12:00:00Z',
     resolvedAt: null,
     events: [],
+    attachments: [],
   },
 ]
 

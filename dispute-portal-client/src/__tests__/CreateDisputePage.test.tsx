@@ -28,6 +28,7 @@ const mockDispute: Dispute = {
   createdAt: '2024-01-15T10:00:00Z',
   resolvedAt: null,
   events: [],
+  attachments: [],
 }
 
 function renderWithRoute(transactionId = '42') {

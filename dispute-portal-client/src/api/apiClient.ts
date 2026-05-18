@@ -1,5 +1,7 @@
 import axios from "axios";
 import type {
+  AdminStats,
+  AttachmentResponse,
   CreateDisputeRequest,
   Dispute,
   LoginRequest,
@@ -96,3 +98,36 @@ export async function getNotifications(): Promise<NotificationLog[]> {
   const response = await apiClient.get<NotificationLog[]>("/api/notifications");
   return response.data;
 }
+
+export async function getAdminStats(): Promise<AdminStats> {
+  const response = await apiClient.get<AdminStats>("/api/admin/disputes/stats");
+  return response.data;
+}
+
+export async function replyToDispute(id: number, message: string): Promise<Dispute> {
+  const response = await apiClient.post<Dispute>(`/api/disputes/${id}/reply`, { message });
+  return response.data;
+}
+
+export async function uploadAttachment(id: number, file: File): Promise<AttachmentResponse> {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await apiClient.post<AttachmentResponse>(`/api/disputes/${id}/attachments`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+}
+
+export async function downloadAttachment(disputeId: number, attachmentId: number, fileName: string): Promise<void> {
+  const response = await apiClient.get(
+    `/api/disputes/${disputeId}/attachments/${attachmentId}`,
+    { responseType: "blob" }
+  );
+  const url = URL.createObjectURL(response.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
