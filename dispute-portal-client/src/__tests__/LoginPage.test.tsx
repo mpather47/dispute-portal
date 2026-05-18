@@ -20,11 +20,11 @@ describe('LoginPage', () => {
     localStorage.clear()
   })
 
-  it('renders email, password fields and login button', () => {
+  it('renders email, password fields and sign in button', () => {
     render(<MemoryRouter><LoginPage /></MemoryRouter>)
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 
   it('does not pre-fill credentials', () => {
@@ -39,7 +39,7 @@ describe('LoginPage', () => {
     render(<MemoryRouter><LoginPage /></MemoryRouter>)
     await user.type(screen.getByLabelText(/email/i), 'wrong@example.com')
     await user.type(screen.getByLabelText(/password/i), 'badpassword')
-    await user.click(screen.getByRole('button', { name: /login/i }))
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
     await waitFor(() => {
       expect(screen.getByText(/invalid email or password/i)).toBeInTheDocument()
     })
@@ -57,7 +57,7 @@ describe('LoginPage', () => {
     render(<MemoryRouter><LoginPage /></MemoryRouter>)
     await user.type(screen.getByLabelText(/email/i), 'customer@test.com')
     await user.type(screen.getByLabelText(/password/i), 'Password123!')
-    await user.click(screen.getByRole('button', { name: /login/i }))
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
     await waitFor(() => {
       expect(localStorage.getItem('token')).toBe('customer-token')
       expect(localStorage.getItem('role')).toBe('Customer')
@@ -65,7 +65,7 @@ describe('LoginPage', () => {
     })
   })
 
-  it('navigates to /admin/disputes for Admin role', async () => {
+  it('navigates to /admin/dashboard for Admin role', async () => {
     const user = userEvent.setup()
     vi.mocked(apiClient.login).mockResolvedValue({
       token: 'admin-token',
@@ -77,9 +77,9 @@ describe('LoginPage', () => {
     render(<MemoryRouter><LoginPage /></MemoryRouter>)
     await user.type(screen.getByLabelText(/email/i), 'admin@test.com')
     await user.type(screen.getByLabelText(/password/i), 'Password123!')
-    await user.click(screen.getByRole('button', { name: /login/i }))
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/admin/disputes')
+      expect(mockNavigate).toHaveBeenCalledWith('/admin/dashboard')
     })
   })
 })
