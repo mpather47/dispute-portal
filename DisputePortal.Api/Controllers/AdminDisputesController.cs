@@ -21,10 +21,11 @@ public class AdminDisputesController : ApiControllerBase
     public async Task<ActionResult<PagedResult<DisputeResponse>>> GetAllDisputes(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
-        [FromQuery] DisputeStatus? status = null)
+        [FromQuery] DisputeStatus? status = null,
+        [FromQuery] string? search = null)
     {
         pageSize = Math.Clamp(pageSize, 1, 100);
-        var result = await _disputeService.GetAllDisputesForAdminAsync(page, pageSize, status);
+        var result = await _disputeService.GetAllDisputesForAdminAsync(page, pageSize, status, search);
         return Ok(result);
     }
 
