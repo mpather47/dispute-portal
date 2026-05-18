@@ -38,6 +38,15 @@ export interface DisputeEvent {
   createdAt: string;
 }
 
+export interface AttachmentResponse {
+  id: number;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
 export interface Dispute {
   id: number;
   caseNumber: string;
@@ -51,6 +60,7 @@ export interface Dispute {
   createdAt: string;
   resolvedAt?: string | null;
   events: DisputeEvent[];
+  attachments: AttachmentResponse[];
   customerName?: string | null;
 }
 
@@ -71,4 +81,12 @@ export interface NotificationLog {
   subject: string;
   message: string;
   sentAt: string;
+}
+
+export interface AdminStats {
+  total: number;
+  openCount: number;
+  submittedToday: number;
+  avgResolutionDays: number;
+  byStatus: Record<string, number>;
 }

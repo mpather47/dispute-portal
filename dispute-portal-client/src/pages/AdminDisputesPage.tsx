@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { isAxiosError } from "axios";
-import { getAdminDisputes, updateDisputeStatus } from "../api/apiClient";
+import { downloadAttachment, getAdminDisputes, updateDisputeStatus } from "../api/apiClient";
 import StatusBadge from "../components/StatusBadge";
 import type { Dispute } from "../types/types";
 
@@ -270,6 +270,39 @@ export default function AdminDisputesPage() {
                 </p>
               )}
             </div>
+
+            {selectedDispute.attachments.length > 0 && (
+              <>
+                <h3>Attachments</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>File</th>
+                      <th>By</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedDispute.attachments.map((a) => (
+                      <tr key={a.id}>
+                        <td>{a.fileName}</td>
+                        <td>{a.uploadedBy}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{ fontSize: "0.8rem", padding: "0.3rem 0.6rem" }}
+                            onClick={() => downloadAttachment(selectedDispute.id, a.id, a.fileName)}
+                          >
+                            Download
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
 
             <h3>Timeline</h3>
             <div className="timeline">

@@ -35,7 +35,12 @@ export default function Navbar() {
           </>
         )}
 
-        {role === "Admin" && <Link to="/admin/disputes">Admin Disputes</Link>}
+        {role === "Admin" && (
+          <>
+            <Link to="/admin/dashboard">Dashboard</Link>
+            <Link to="/admin/disputes">Disputes</Link>
+          </>
+        )}
 
         <Link to="/notifications">
           Notifications
