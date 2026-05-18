@@ -81,7 +81,7 @@ export default function AdminDisputesPage() {
     }
   }
 
-  async function handleUpdate(e: SubmitEvent) {
+  async function handleUpdate(e: { preventDefault(): void }) {
     e.preventDefault();
     if (!selectedDispute) return;
     setError("");
