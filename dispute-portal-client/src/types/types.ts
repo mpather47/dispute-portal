@@ -51,6 +51,7 @@ export interface Dispute {
   createdAt: string;
   resolvedAt?: string | null;
   events: DisputeEvent[];
+  customerName?: string | null;
 }
 
 export interface UpdateDisputeStatusRequest {

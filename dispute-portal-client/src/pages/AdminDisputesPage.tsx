@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+
+import { isAxiosError } from "axios";
 import { getAdminDisputes, updateDisputeStatus } from "../api/apiClient";
 import StatusBadge from "../components/StatusBadge";
 import type { Dispute } from "../types/types";
+
+const PAGE_SIZE = 10;
 
 const allStatuses = [
   { value: 1, label: "Submitted" },
@@ -24,65 +27,83 @@ const validTransitions: Record<string, number[]> = {
 
 export default function AdminDisputesPage() {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<number | "">("");
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
-  const [status, setStatus] = useState(2);
+  const [panelMode, setPanelMode] = useState<"view" | "review">("view");
+  const [newStatus, setNewStatus] = useState(2);
   const [adminNotes, setAdminNotes] = useState("");
   const [error, setError] = useState("");
 
-  async function loadDisputes() {
-    try {
-      const data = await getAdminDisputes();
-      setDisputes(data);
-    } catch {
-      setError("Failed to load disputes.");
-    }
-  }
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   useEffect(() => {
     async function init() {
       try {
-        const data = await getAdminDisputes();
-        setDisputes(data);
+        const result = await getAdminDisputes(page, PAGE_SIZE, statusFilter || undefined);
+        setDisputes(result.items);
+        setTotalCount(result.totalCount);
+        setSelectedDispute((prev) =>
+          prev ? (result.items.find((d) => d.id === prev.id) ?? prev) : null
+        );
       } catch {
         setError("Failed to load disputes.");
       }
     }
     init();
-  }, []);
+  }, [page, statusFilter]);
 
   useEffect(() => {
     function onDisputeUpdated() {
-      loadDisputes();
+      getAdminDisputes(page, PAGE_SIZE, statusFilter || undefined)
+        .then((result) => {
+          setDisputes(result.items);
+          setTotalCount(result.totalCount);
+          setSelectedDispute((prev) =>
+            prev ? (result.items.find((d) => d.id === prev.id) ?? prev) : null
+          );
+        })
+        .catch(() => {});
     }
     window.addEventListener("dispute:updated", onDisputeUpdated);
     return () => window.removeEventListener("dispute:updated", onDisputeUpdated);
-  }, []);
+  }, [page, statusFilter]);
 
-  function startReview(dispute: Dispute) {
-    const allowed = validTransitions[dispute.status] ?? [];
+  function openPanel(dispute: Dispute, mode: "view" | "review") {
     setSelectedDispute(dispute);
+    setPanelMode(mode);
     setAdminNotes("");
-    setStatus(allowed[0] ?? 2);
     setError("");
+    if (mode === "review") {
+      const allowed = validTransitions[dispute.status] ?? [];
+      setNewStatus(allowed[0] ?? 2);
+    }
   }
 
-  async function handleUpdate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-
+  async function handleUpdate(e: SubmitEvent) {
+    e.preventDefault();
     if (!selectedDispute) return;
-
+    setError("");
     try {
-      await updateDisputeStatus(selectedDispute.id, {
-        status,
-        adminNotes,
-      });
-
+      await updateDisputeStatus(selectedDispute.id, { status: newStatus, adminNotes });
       setSelectedDispute(null);
-      await loadDisputes();
-    } catch {
-      setError("Failed to update dispute status.");
+      const result = await getAdminDisputes(page, PAGE_SIZE, statusFilter || undefined);
+      setDisputes(result.items);
+      setTotalCount(result.totalCount);
+    } catch (err: unknown) {
+      setError(
+        isAxiosError(err)
+          ? (err.response?.data as { message?: string })?.message ?? "Failed to update."
+          : "Failed to update."
+      );
     }
+  }
+
+  function handleFilterChange(value: number | "") {
+    setStatusFilter(value);
+    setPage(1);
+    setSelectedDispute(null);
   }
 
   return (
@@ -92,81 +113,194 @@ export default function AdminDisputesPage() {
         <p>Review and update customer dispute cases.</p>
       </div>
 
+      <div className="filter-bar">
+        <label htmlFor="statusFilter">Filter by status</label>
+        <select
+          id="statusFilter"
+          value={statusFilter}
+          onChange={(e) =>
+            handleFilterChange(e.target.value === "" ? "" : Number(e.target.value))
+          }
+        >
+          <option value="">All statuses</option>
+          {allStatuses.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        <span className="muted">{totalCount} dispute{totalCount !== 1 ? "s" : ""}</span>
+      </div>
+
       {error && <div className="error">{error}</div>}
 
       <div className="grid">
         <div className="card">
-          <h2>Open Disputes</h2>
-
           <table>
             <thead>
               <tr>
                 <th>Case</th>
+                <th>Customer</th>
                 <th>Merchant</th>
                 <th>Amount</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
             </thead>
-
             <tbody>
-              {disputes.map((dispute) => (
-                <tr key={dispute.id}>
-                  <td>{dispute.caseNumber}</td>
-                  <td>{dispute.merchantName}</td>
-                  <td>R {dispute.amount.toFixed(2)}</td>
-                  <td>
-                    <StatusBadge status={dispute.status} />
-                  </td>
-                  <td>
-                    {(validTransitions[dispute.status]?.length ?? 0) > 0 && (
-                      <button type="button" onClick={() => startReview(dispute)}>
-                        Review
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {disputes.map((dispute) => {
+                const hasTransitions = (validTransitions[dispute.status]?.length ?? 0) > 0;
+                return (
+                  <tr
+                    key={dispute.id}
+                    className={selectedDispute?.id === dispute.id ? "row-selected" : ""}
+                  >
+                    <td>{dispute.caseNumber}</td>
+                    <td>{dispute.customerName ?? "—"}</td>
+                    <td>{dispute.merchantName}</td>
+                    <td>R {dispute.amount.toFixed(2)}</td>
+                    <td>
+                      <StatusBadge status={dispute.status} />
+                    </td>
+                    <td className="action-cell">
+                      {hasTransitions ? (
+                        <button type="button" onClick={() => openPanel(dispute, "review")}>
+                          Review
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => openPanel(dispute, "view")}
+                        >
+                          View
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 
           {disputes.length === 0 && <p>No disputes found.</p>}
+
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button
+                type="button"
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                ← Prev
+              </button>
+              <span>
+                Page {page} of {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={page === totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </div>
 
         {selectedDispute && (
           <div className="card form-card">
-            <h2>Update Case</h2>
-            <p>{selectedDispute.caseNumber}</p>
-
-            <form onSubmit={handleUpdate}>
-              <label htmlFor="status">Status</label>
-              <select
-                id="status"
-                value={status}
-                onChange={(e) => setStatus(Number(e.target.value))}
+            <div className="panel-header">
+              <h2>{selectedDispute.caseNumber}</h2>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={() => setSelectedDispute(null)}
               >
-                {allStatuses
-                  .filter((s) =>
-                    (validTransitions[selectedDispute.status] ?? []).includes(s.value)
-                  )
-                  .map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-              </select>
+                ×
+              </button>
+            </div>
 
-              <label htmlFor="adminNotes">Admin Notes</label>
-              <textarea
-                id="adminNotes"
-                value={adminNotes}
-                onChange={(e) => setAdminNotes(e.target.value)}
-                rows={5}
-                placeholder="Add review notes..."
-              />
+            <div className="dispute-meta">
+              {selectedDispute.customerName && (
+                <p>
+                  <strong>Customer:</strong> {selectedDispute.customerName}
+                </p>
+              )}
+              <p>
+                <strong>Merchant:</strong> {selectedDispute.merchantName}
+              </p>
+              <p>
+                <strong>Amount:</strong> R {selectedDispute.amount.toFixed(2)}
+              </p>
+              <p>
+                <strong>Reason:</strong> {selectedDispute.reason}
+              </p>
+              {selectedDispute.customerNotes && (
+                <p>
+                  <strong>Customer Notes:</strong> {selectedDispute.customerNotes}
+                </p>
+              )}
+              {selectedDispute.adminNotes && (
+                <p>
+                  <strong>Admin Notes:</strong> {selectedDispute.adminNotes}
+                </p>
+              )}
+            </div>
 
-              <button type="submit">Update Status</button>
-            </form>
+            <h3>Timeline</h3>
+            <div className="timeline">
+              {selectedDispute.events.map((event, index) => (
+                <div className="timeline-item" key={index}>
+                  <div className="timeline-dot" />
+                  <div>
+                    <strong>{event.status}</strong>
+                    <p>{event.message}</p>
+                    <small>
+                      {event.createdBy} · {new Date(event.createdAt).toLocaleString()}
+                    </small>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {panelMode === "review" ? (
+              <>
+                <h3>Update Status</h3>
+                <form onSubmit={handleUpdate}>
+                  <label htmlFor="status">New Status</label>
+                  <select
+                    id="status"
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(Number(e.target.value))}
+                  >
+                    {allStatuses
+                      .filter((s) =>
+                        (validTransitions[selectedDispute.status] ?? []).includes(s.value)
+                      )
+                      .map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                  </select>
+
+                  <label htmlFor="adminNotes">Admin Notes</label>
+                  <textarea
+                    id="adminNotes"
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    rows={4}
+                    placeholder="Add review notes..."
+                  />
+
+                  {error && <div className="error">{error}</div>}
+                  <button type="submit">Update Status</button>
+                </form>
+              </>
+            ) : (
+              <p className="muted">No further actions available for this case.</p>
+            )}
           </div>
         )}
       </div>

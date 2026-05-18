@@ -26,7 +26,8 @@ public record DisputeResponse(
     string Status,
     DateTime CreatedAt,
     DateTime? ResolvedAt,
-    List<DisputeEventResponse> Events
+    List<DisputeEventResponse> Events,
+    string? CustomerName = null
 );
 
 public record DisputeEventResponse(

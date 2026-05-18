@@ -1,4 +1,5 @@
 using DisputePortal.Api.DTOs;
+using DisputePortal.Api.Models;
 using DisputePortal.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,10 +20,11 @@ public class AdminDisputesController : ApiControllerBase
     [HttpGet]
     public async Task<ActionResult<PagedResult<DisputeResponse>>> GetAllDisputes(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] int pageSize = 10,
+        [FromQuery] DisputeStatus? status = null)
     {
         pageSize = Math.Clamp(pageSize, 1, 100);
-        var result = await _disputeService.GetAllDisputesForAdminAsync(page, pageSize);
+        var result = await _disputeService.GetAllDisputesForAdminAsync(page, pageSize, status);
         return Ok(result);
     }
 

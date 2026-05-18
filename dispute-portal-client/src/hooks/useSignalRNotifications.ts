@@ -4,14 +4,31 @@ import {
   HubConnectionState,
   type HubConnection,
 } from "@microsoft/signalr";
+import { getNotifications } from "../api/apiClient";
 import type { NotificationLog } from "../types/types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
+
+function lastReadKey() {
+  const userId = localStorage.getItem("userId");
+  return userId ? `notif_last_read_${userId}` : null;
+}
 
 export function useSignalRNotifications() {
   const [toasts, setToasts] = useState<NotificationLog[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const connectionRef = useRef<HubConnection | null>(null);
+
+  useEffect(() => {
+    const key = lastReadKey();
+    const lastRead = key ? localStorage.getItem(key) : null;
+    const since = lastRead ? new Date(lastRead) : new Date(0);
+    getNotifications()
+      .then((all) => {
+        setUnreadCount(all.filter((n) => new Date(n.sentAt) > since).length);
+      })
+      .catch(() => {});
+  }, []);
 
   function dismiss(id: number) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -19,6 +36,8 @@ export function useSignalRNotifications() {
 
   function markAllRead() {
     setUnreadCount(0);
+    const key = lastReadKey();
+    if (key) localStorage.setItem(key, new Date().toISOString());
   }
 
   useEffect(() => {

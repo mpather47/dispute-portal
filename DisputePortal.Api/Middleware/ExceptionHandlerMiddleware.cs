@@ -37,7 +37,7 @@ public class ExceptionHandlerMiddleware
                 context.Request.Method, context.Request.Path);
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             context.Response.ContentType = "application/json";
-            await context.Response.WriteAsJsonAsync(new { message = "Bad request." });
+            await context.Response.WriteAsJsonAsync(new { message = ex.Message });
         }
         catch (Exception ex)
         {
