@@ -15,7 +15,7 @@ public class AdminDisputesControllerTests
     private static DisputeResponse MakeDispute(int id = 1) => new(
         id, $"CASE-00{id}", 10, "Merchant", 99.99m,
         "Fraud", "Notes", null, "Submitted",
-        DateTime.UtcNow, null, []);
+        DateTime.UtcNow, null, [], []);
 
     private static (AdminDisputesController controller, Mock<IDisputeService> mock) Create(
         string adminName = "Admin User")
@@ -43,7 +43,7 @@ public class AdminDisputesControllerTests
         var (controller, mock) = Create();
         var paged = new PagedResult<DisputeResponse>(
             [MakeDispute(1), MakeDispute(2)], 2, 1, 20);
-        mock.Setup(s => s.GetAllDisputesForAdminAsync(1, 20)).ReturnsAsync(paged);
+        mock.Setup(s => s.GetAllDisputesForAdminAsync(1, 20, null, null)).ReturnsAsync(paged);
 
         var result = await controller.GetAllDisputes(1, 20);
 
@@ -60,12 +60,13 @@ public class AdminDisputesControllerTests
     public async Task GetAllDisputes_ClampesPageSize(int requested, int expected)
     {
         var (controller, mock) = Create();
-        mock.Setup(s => s.GetAllDisputesForAdminAsync(It.IsAny<int>(), It.IsAny<int>()))
+        mock.Setup(s => s.GetAllDisputesForAdminAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DisputeStatus?>(), It.IsAny<string?>()))
             .ReturnsAsync(new PagedResult<DisputeResponse>([], 0, 1, expected));
 
         await controller.GetAllDisputes(1, requested);
 
-        mock.Verify(s => s.GetAllDisputesForAdminAsync(1, expected), Times.Once);
+        mock.Verify(s => s.GetAllDisputesForAdminAsync(1, expected, null, null), Times.Once);
     }
 
     [Fact]
@@ -97,5 +98,23 @@ public class AdminDisputesControllerTests
 
         mock.Verify(s => s.UpdateDisputeStatusAsync(
             1, It.IsAny<UpdateDisputeStatusRequest>(), "Jane Admin"), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetStats_Returns200WithStatsResponse()
+    {
+        var (controller, mock) = Create();
+        var stats = new AdminStatsResponse(
+            10, 5, 3, 2.5,
+            new Dictionary<string, int> { ["Submitted"] = 5, ["Resolved"] = 5 });
+        mock.Setup(s => s.GetAdminStatsAsync()).ReturnsAsync(stats);
+
+        var result = await controller.GetStats();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var body = Assert.IsType<AdminStatsResponse>(ok.Value);
+        Assert.Equal(10, body.Total);
+        Assert.Equal(5, body.OpenCount);
+        Assert.Equal(3, body.SubmittedToday);
     }
 }
