@@ -14,6 +14,19 @@ public record UpdateDisputeStatusRequest(
     [MaxLength(2000)] string? AdminNotes
 );
 
+public record ReplyRequest(
+    [Required, MaxLength(2000)] string Message
+);
+
+public record AttachmentResponse(
+    int Id,
+    string FileName,
+    string ContentType,
+    long FileSize,
+    string UploadedBy,
+    DateTime UploadedAt
+);
+
 public record DisputeResponse(
     int Id,
     string CaseNumber,
@@ -27,6 +40,7 @@ public record DisputeResponse(
     DateTime CreatedAt,
     DateTime? ResolvedAt,
     List<DisputeEventResponse> Events,
+    List<AttachmentResponse> Attachments,
     string? CustomerName = null
 );
 
@@ -35,4 +49,12 @@ public record DisputeEventResponse(
     string Message,
     string CreatedBy,
     DateTime CreatedAt
+);
+
+public record AdminStatsResponse(
+    int Total,
+    int OpenCount,
+    int SubmittedToday,
+    double AvgResolutionDays,
+    Dictionary<string, int> ByStatus
 );

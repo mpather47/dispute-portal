@@ -16,6 +16,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Dispute> Disputes => Set<Dispute>();
     public DbSet<DisputeEvent> DisputeEvents => Set<DisputeEvent>();
     public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
+    public DbSet<DisputeAttachment> DisputeAttachments => Set<DisputeAttachment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -29,6 +29,13 @@ public class AdminDisputesController : ApiControllerBase
         return Ok(result);
     }
 
+    [HttpGet("stats")]
+    public async Task<ActionResult<AdminStatsResponse>> GetStats()
+    {
+        var stats = await _disputeService.GetAdminStatsAsync();
+        return Ok(stats);
+    }
+
     [HttpPut("{id:int}/status")]
     public async Task<ActionResult<DisputeResponse>> UpdateStatus(
         int id,
