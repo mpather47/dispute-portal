@@ -1,5 +1,6 @@
 using DisputePortal.Api.Data;
 using DisputePortal.Api.DTOs;
+using DisputePortal.Api.Exceptions;
 using DisputePortal.Api.Helpers;
 using DisputePortal.Api.Models;
 using Microsoft.AspNetCore.Http;
@@ -50,14 +51,14 @@ public class DisputeService : IDisputeService
 
         if (!transaction.IsDisputable)
         {
-            throw new InvalidOperationException(
+            throw new BusinessRuleException(
                 "This transaction is not eligible for dispute."
             );
         }
 
         if (transaction.Dispute is not null)
         {
-            throw new InvalidOperationException(
+            throw new BusinessRuleException(
                 "This transaction already has an active dispute."
             );
         }
@@ -231,7 +232,7 @@ public class DisputeService : IDisputeService
 
         if (!IsValidStatusTransition(dispute.Status, request.Status))
         {
-            throw new InvalidOperationException(
+            throw new BusinessRuleException(
                 $"Invalid status transition from {dispute.Status} to {request.Status}."
             );
         }
@@ -331,11 +332,11 @@ public class DisputeService : IDisputeService
             throw new UnauthorizedAccessException("You do not have access to this dispute.");
 
         if (dispute.Status != DisputeStatus.MoreInfoRequired)
-            throw new InvalidOperationException("A reply can only be submitted when the dispute requires more information.");
+            throw new BusinessRuleException("A reply can only be submitted when the dispute requires more information.");
 
         var sanitizedMessage = InputSanitizer.Sanitize(request.Message);
         if (string.IsNullOrEmpty(sanitizedMessage))
-            throw new InvalidOperationException("Reply message cannot be blank.");
+            throw new BusinessRuleException("Reply message cannot be blank.");
 
         dispute.Status = DisputeStatus.UnderReview;
 
@@ -378,11 +379,11 @@ public class DisputeService : IDisputeService
         IFormFile file)
     {
         if (file.Length > 5 * 1024 * 1024)
-            throw new InvalidOperationException("File size cannot exceed 5 MB.");
+            throw new BusinessRuleException("File size cannot exceed 5 MB.");
 
         var allowed = new[] { "image/jpeg", "image/png", "image/gif", "application/pdf", "text/plain" };
         if (!allowed.Contains(file.ContentType))
-            throw new InvalidOperationException("Only images, PDFs, and text files are allowed.");
+            throw new BusinessRuleException("Only images, PDFs, and text files are allowed.");
 
         var dispute = await _db.Disputes
             .Include(x => x.Customer)
@@ -400,7 +401,7 @@ public class DisputeService : IDisputeService
             throw new UnauthorizedAccessException("You do not have access to this dispute.");
 
         if (!isAdmin && dispute.Status != DisputeStatus.MoreInfoRequired)
-            throw new InvalidOperationException("Attachments can only be uploaded when more information has been requested.");
+            throw new BusinessRuleException("Attachments can only be uploaded when more information has been requested.");
 
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms);

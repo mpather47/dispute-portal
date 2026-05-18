@@ -1,3 +1,5 @@
+using DisputePortal.Api.Exceptions;
+
 namespace DisputePortal.Api.Middleware;
 
 public class ExceptionHandlerMiddleware
@@ -28,6 +30,12 @@ public class ExceptionHandlerMiddleware
         catch (KeyNotFoundException ex)
         {
             context.Response.StatusCode = StatusCodes.Status404NotFound;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new { message = ex.Message });
+        }
+        catch (BusinessRuleException ex)
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsJsonAsync(new { message = ex.Message });
         }

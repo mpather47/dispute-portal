@@ -17,15 +17,14 @@ export default function Navbar() {
     navigate("/login");
   }
 
-  if (!token) {
-    return null;
-  }
+  if (!token) return null;
 
   return (
     <nav className="navbar">
-      <div>
-        <strong>Dispute Portal</strong>
-      </div>
+      <Link to={role === "Admin" ? "/admin/dashboard" : "/transactions"} className="navbar-brand">
+        <span className="brand-icon">🏦</span>
+        Dispute Portal
+      </Link>
 
       <div className="nav-links">
         {role === "Customer" && (
@@ -49,8 +48,8 @@ export default function Navbar() {
           )}
         </Link>
 
-        <span>{fullName}</span>
-        <button onClick={logout}>Logout</button>
+        <span className="nav-user">{fullName}</span>
+        <button onClick={logout}>Sign out</button>
       </div>
     </nav>
   );
