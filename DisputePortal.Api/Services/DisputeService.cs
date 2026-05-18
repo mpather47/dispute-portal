@@ -138,7 +138,7 @@ public class DisputeService : IDisputeService
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync();
 
-        return disputes.Select(MapDispute).ToList();
+        return disputes.Select(d => MapDispute(d)).ToList();
     }
 
     public async Task<PagedResult<DisputeResponse>> GetAllDisputesForAdminAsync(
