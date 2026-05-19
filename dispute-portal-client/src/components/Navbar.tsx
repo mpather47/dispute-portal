@@ -23,7 +23,7 @@ export default function Navbar() {
     <nav className="navbar">
       <Link to={role === "Admin" ? "/admin/dashboard" : "/transactions"} className="navbar-brand">
         <span className="brand-icon">🏦</span>
-        Dispute Portal
+        Bank Dispute Portal
       </Link>
 
       <div className="nav-links">
